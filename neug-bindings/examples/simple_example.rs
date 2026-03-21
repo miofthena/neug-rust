@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let person_knows_person_csv = format!("{}/person_knows_person.csv", data_dir);
 
     let mut db = Database::open(db_dir, Mode::ReadWrite)?;
-    let mut conn = db.connect()?;
+    let conn = db.connect()?;
 
     // First create the graph schema
     conn.execute("CREATE NODE TABLE person(id INT64, name STRING, age INT64, PRIMARY KEY(id));")?;
@@ -51,8 +51,8 @@ fn run_default_example() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempdir()?;
 
     println!("Running with temporary database at {:?}", dir.path());
-    let mut db = Database::open(dir.path(), Mode::ReadWrite)?;
-    let mut conn = db.connect()?;
+    let db = Database::open(dir.path(), Mode::ReadWrite)?;
+    let conn = db.connect()?;
     conn.execute("CREATE NODE TABLE person(id INT64, name STRING, age INT64, PRIMARY KEY(id));")?;
     conn.execute("CREATE REL TABLE knows(FROM person TO person, weight DOUBLE);")?;
 

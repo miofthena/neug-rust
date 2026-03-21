@@ -12,7 +12,7 @@ const AVG_FRIENDS: i64 = 5;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Silence C++ glog spam from the neug engine globally for the benchmark
     unsafe {
-        let dev_null = libc::open(b"/dev/null\0".as_ptr() as *const _, libc::O_WRONLY);
+        let dev_null = libc::open(c"/dev/null".as_ptr() as *const _, libc::O_WRONLY);
         if dev_null != -1 {
             libc::dup2(dev_null, libc::STDERR_FILENO);
             libc::close(dev_null);
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         // 1. Open Database in ReadWrite mode
         let mut db = Database::open(db_path, Mode::ReadWrite)?;
-        let mut conn = db.connect()?;
+        let conn = db.connect()?;
 
         // 2. Create Schema
         println!("  -> Creating Schema...");
@@ -162,7 +162,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut cumulative_thread_time = Duration::new(0, 0);
-    for (t_id, handle) in handles {
+    for (_t_id, handle) in handles {
         let thread_time = handle.join().unwrap();
         cumulative_thread_time += thread_time;
         // println!("     Thread {} completed in {:.2?}", t_id, thread_time);

@@ -1,6 +1,6 @@
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use neug_rust::{AccessMode, Database, Mode};
-use std::collections::HashMap;
+use criterion::{Criterion, criterion_group, criterion_main};
+use neug_rust::{Database, Mode};
+use std::hint::black_box;
 use tempfile::tempdir;
 
 fn bench_connection_lifecycle(c: &mut Criterion) {
@@ -20,7 +20,7 @@ fn bench_connection_lifecycle(c: &mut Criterion) {
 
 fn bench_query_dispatch(c: &mut Criterion) {
     let dir = tempdir().unwrap();
-    let mut db = Database::open(dir.path(), Mode::ReadWrite).unwrap();
+    let db = Database::open(dir.path(), Mode::ReadWrite).unwrap();
     let conn = db.connect().unwrap();
 
     // Setup schema

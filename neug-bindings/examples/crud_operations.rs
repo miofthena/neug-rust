@@ -4,8 +4,8 @@ use tempfile::tempdir;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("--- NeuG CRUD Operations Example ---");
     let dir = tempdir()?;
-    let mut db = Database::open(dir.path(), Mode::ReadWrite)?;
-    let mut conn = db.connect()?;
+    let db = Database::open(dir.path(), Mode::ReadWrite)?;
+    let conn = db.connect()?;
 
     println!("1. Creating Graph Schema...");
     conn.execute("CREATE NODE TABLE user(id INT64, age INT64, name STRING, PRIMARY KEY(id));")?;

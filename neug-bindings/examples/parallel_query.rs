@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut db = Database::open(dir.path(), Mode::ReadWrite)?;
 
     {
-        let mut conn = db.connect()?;
+        let conn = db.connect()?;
         conn.execute("CREATE NODE TABLE event(id INT64, type STRING, PRIMARY KEY(id));")?;
         for i in 0..100 {
             let query = format!("CREATE (e:event {{id: {}, type: 'log'}});", i);
