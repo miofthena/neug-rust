@@ -1,2 +1,2 @@
-[build]
-rustflags = ["-Awarnings"]
+[env]
+RUST_TEST_THREADS = "1"

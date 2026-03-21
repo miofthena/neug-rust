@@ -49,14 +49,16 @@ impl Drop for QueryResult {
 pub struct Connection {
     // Pointer to the C++ Connection object via our C wrapper
     inner: neug_sys::neug_conn_t,
+    db_inner: neug_sys::neug_db_t,
 }
 
-// Connections in neug can be sent across threads but are not sync
+// Connections in neug can be sent across threads and shared concurrently
 unsafe impl Send for Connection {}
+unsafe impl Sync for Connection {}
 
 impl Connection {
-    pub(crate) fn new(ptr: neug_sys::neug_conn_t) -> Self {
-        Self { inner: ptr }
+    pub(crate) fn new(ptr: neug_sys::neug_conn_t, db_ptr: neug_sys::neug_db_t) -> Self {
+        Self { inner: ptr, db_inner: db_ptr }
     }
 
     /// Checks if the connection is currently open.
@@ -114,7 +116,7 @@ impl Connection {
     /// Closes the connection.
     pub fn close(&mut self) {
         if !self.inner.is_null() {
-            unsafe { neug_conn_close(self.inner) };
+            unsafe { neug_conn_close(self.db_inner, self.inner) };
             self.inner = std::ptr::null_mut();
         }
     }

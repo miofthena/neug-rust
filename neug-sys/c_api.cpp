@@ -76,9 +76,13 @@ neug_conn_t neug_db_connect(neug_db_t db) {
     }
 }
 
-void neug_conn_close(neug_conn_t conn) {
+void neug_conn_close(neug_db_t db, neug_conn_t conn) {
     if (conn) {
         auto* conn_ptr = static_cast<std::shared_ptr<neug::Connection>*>(conn);
+        if (db && *conn_ptr) {
+             auto* neug_db = static_cast<neug::NeugDB*>(db);
+             neug_db->RemoveConnection(*conn_ptr);
+        }
         if (*conn_ptr) {
              (*conn_ptr)->Close();
         }

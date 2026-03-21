@@ -120,7 +120,7 @@ impl Database {
             return Err(Error::InitializationFailed(error_msg));
         }
 
-        Ok(Connection::new(conn_ptr))
+        Ok(Connection::new(conn_ptr, self.inner))
     }
 
     /// Close the database.

@@ -35,7 +35,7 @@ void neug_db_close(neug_db_t db);
 
 // Connection Operations
 neug_conn_t neug_db_connect(neug_db_t db);
-void neug_conn_close(neug_conn_t conn);
+void neug_conn_close(neug_db_t db, neug_conn_t conn);
 
 // Query Execution
 // Executes a query and returns a result handle. Returns NULL on failure.

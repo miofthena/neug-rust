@@ -91,25 +91,22 @@ fn test_parallel_connections() {
 
 #[test]
 fn test_parallel_query_executions() {
+    use std::sync::Arc;
     use std::thread;
 
     let dir = tempdir().unwrap();
     let db_path = dir.path().join("parallel_query_db");
 
     let mut db = Database::open(db_path, Mode::ReadWrite).unwrap();
-    // Simulate connection cloning for multiple threads (in real implementation may need Send/Sync bounds)
-    // For this mock, we'll create separate connections per thread.
-
-    let mut conn = db.connect().unwrap();
+    
+    let conn = Arc::new(db.connect().unwrap());
     conn.execute("CREATE NODE TABLE person(id INT64, name STRING, PRIMARY KEY(id));")
         .unwrap();
 
     let mut threads = vec![];
 
     for i in 0..10 {
-        // In python it shared `conn`. Rust requires Sync for `conn`.
-        // To mimic, we will open a new connection for each thread since our mock is not Sync.
-        let local_conn = db.connect().unwrap();
+        let local_conn = Arc::clone(&conn);
 
         let t = thread::spawn(move || {
             for j in 0..10 {
@@ -131,7 +128,9 @@ fn test_parallel_query_executions() {
     let res = conn.execute("MATCH (p) RETURN p.id AS id ORDER BY id;");
     assert!(res.is_ok());
 
-    conn.close();
+    // We can't call conn.close() here if we only have Arc without dropping all other Arcs or using Arc::into_inner,
+    // but Drop will handle closing it when the last Arc is dropped.
+    drop(conn);
     db.close();
 }
 
