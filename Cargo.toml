@@ -11,3 +11,8 @@ edition = "2024"
 authors = ["miofthena"]
 license = "Apache-2.0"
 repository = "https://github.com/miofthena/neug-rust"
+
+[workspace.metadata.release-plz]
+# release-plz will automatically create a changelog and bump versions
+# based on Conventional Commits (feat:, fix:, etc.)
+publish_allow_dirty = true # To allow our build script's generated files during publish
