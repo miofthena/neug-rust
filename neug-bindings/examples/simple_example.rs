@@ -3,7 +3,7 @@ use std::env;
 use std::process;
 use tempfile::tempdir;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 3 {
@@ -15,7 +15,6 @@ fn main() -> Result<(), String> {
         }
         process::exit(1);
     }
-
     let data_dir = &args[1];
     let db_dir = &args[2];
 
@@ -48,13 +47,12 @@ fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn run_default_example() -> Result<(), String> {
-    let dir = tempdir().map_err(|e| e.to_string())?;
+fn run_default_example() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
 
     println!("Running with temporary database at {:?}", dir.path());
     let mut db = Database::open(dir.path(), Mode::ReadWrite)?;
     let mut conn = db.connect()?;
-
     conn.execute("CREATE NODE TABLE person(id INT64, name STRING, age INT64, PRIMARY KEY(id));")?;
     conn.execute("CREATE REL TABLE knows(FROM person TO person, weight DOUBLE);")?;
 

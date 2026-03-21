@@ -58,8 +58,8 @@ Building `neug` from source requires several C++ dependencies installed on your 
 use neug_rust::{Database, Mode};
 use tempfile::tempdir;
 
-fn main() -> Result<(), String> {
-    let dir = tempdir().map_err(|e| e.to_string())?;
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
     
     // 1. Initialize the database
     let mut db = Database::open(dir.path(), Mode::ReadWrite)?;

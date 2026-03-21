@@ -63,7 +63,7 @@ fn test_local_connection_after_close() {
 
     let res = conn.execute("MATCH (n) RETURN n");
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err(), "Connection is closed");
+    assert_eq!(res.unwrap_err(), neug_rust::Error::ConnectionClosed);
 
     db.close();
 }

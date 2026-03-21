@@ -1,4 +1,5 @@
 use crate::connection::Connection;
+use crate::error::{Error, Result};
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +45,7 @@ pub struct Database {
 impl Database {
     /// Opens a database at the specified path.
     /// If `db_path` is empty or ":memory:", the database is opened in memory.
-    pub fn open<P: AsRef<Path>>(db_path: P, mode: Mode) -> Result<Self, String> {
+    pub fn open<P: AsRef<Path>>(db_path: P, mode: Mode) -> Result<Self> {
         let options = DatabaseOptions {
             db_path: db_path.as_ref().to_string_lossy().into_owned(),
             mode,
@@ -54,7 +55,7 @@ impl Database {
     }
 
     /// Opens a database with full options.
-    pub fn with_options(options: DatabaseOptions) -> Result<Self, String> {
+    pub fn with_options(options: DatabaseOptions) -> Result<Self> {
         // Here you would initialize the C++ NeugDB object.
         // let inner = ffi::new_neug_db(options.db_path.clone(), options.mode.as_str(), options.max_thread_num, options.checkpoint_on_close)?;
 
@@ -70,9 +71,9 @@ impl Database {
     }
 
     /// Creates a new connection to the database.
-    pub fn connect(&self) -> Result<Connection, String> {
+    pub fn connect(&self) -> Result<Connection> {
         if self.is_closed {
-            return Err("Database is closed".to_string());
+            return Err(Error::DatabaseClosed);
         }
 
         // let conn_inner = ffi::db_connect(self.inner.as_ref())?;

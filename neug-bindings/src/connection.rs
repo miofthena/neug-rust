@@ -1,3 +1,4 @@
+use crate::error::{Error, Result};
 use std::collections::HashMap;
 
 /// Represents the access mode for a query.
@@ -48,7 +49,7 @@ impl Connection {
     }
 
     /// Executes a Cypher query on the database.
-    pub fn execute(&self, query: &str) -> Result<QueryResult, String> {
+    pub fn execute(&self, query: &str) -> Result<QueryResult> {
         self.execute_with_options(query, None, None)
     }
 
@@ -58,9 +59,9 @@ impl Connection {
         query: &str,
         access_mode: Option<AccessMode>,
         _parameters: Option<&HashMap<String, String>>, // simplified parameter type for illustration
-    ) -> Result<QueryResult, String> {
+    ) -> Result<QueryResult> {
         if !self.is_open {
-            return Err("Connection is closed".to_string());
+            return Err(Error::ConnectionClosed);
         }
 
         let _mode_str = access_mode.map(|m| m.as_str()).unwrap_or("");
