@@ -12,7 +12,7 @@ thread_local std::string g_last_error;
 extern "C" {
 
 void neug_init(void) {
-    // No-op. Handled by Rust environment variables.
+    // No-op. Handled by Rust stderr redirection.
 }
 
 const char* neug_get_last_error() {

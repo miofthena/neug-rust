@@ -63,11 +63,6 @@ impl Database {
 
     /// Opens a database with full options.
     pub fn with_options(options: DatabaseOptions) -> Result<Self> {
-        // Set environment variables for the underlying C++ glog library
-        // to prevent it from spamming stdout/stderr with INFO messages
-        // (like "Closing connection" on every benchmark iteration).
-        unsafe { std::env::set_var("GLOG_minloglevel", "2") }; // 0=INFO, 1=WARNING, 2=ERROR
-
         unsafe { neug_init() };
 
         let c_path = CString::new(options.db_path.clone()).unwrap();

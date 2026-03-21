@@ -10,6 +10,15 @@ const NUM_MESSAGES: i64 = 5_000;
 const AVG_FRIENDS: i64 = 5;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Silence C++ glog spam from the neug engine globally for the benchmark
+    unsafe {
+        let dev_null = libc::open(b"/dev/null\0".as_ptr() as *const _, libc::O_WRONLY);
+        if dev_null != -1 {
+            libc::dup2(dev_null, libc::STDERR_FILENO);
+            libc::close(dev_null);
+        }
+    }
+
     println!("=== LDBC SNB Interactive Macro-Benchmark ===");
     println!("Simulating a social network graph...");
 

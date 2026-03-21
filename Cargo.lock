@@ -449,6 +449,8 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 name = "neug-benchmarks"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "libc",
  "neug-rust",
  "rand",
  "tempfile",
@@ -459,7 +461,7 @@ dependencies = [
 name = "neug-rust"
 version = "0.1.0"
 dependencies = [
- "criterion",
+ "libc",
  "neug-sys",
  "tempfile",
  "thiserror",
