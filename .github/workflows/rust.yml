@@ -1,0 +1,46 @@
+name: Rust Build and Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  # Limit parallel jobs to prevent OOM on standard GitHub runners
+  ZVEC_BUILD_PARALLEL: 2
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential libssl-dev clang libgflags-dev libgoogle-glog-dev protobuf-compiler libprotobuf-dev libyaml-cpp-dev
+
+    - name: Set up Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        # Cache the target directory, but don't cache the massive C++ build artifacts
+        # unless necessary, as they might exceed the 10GB cache limit quickly.
+        cache-on-failure: "true"
+
+    - name: Check formatting
+      run: cargo fmt -- --check
+
+    - name: Build Workspace
+      run: cargo build --verbose
+
+    - name: Run Tests
+      run: cargo test --verbose
+
+    - name: Run Examples
+      run: cargo run --example simple_example

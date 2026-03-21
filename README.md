@@ -1,6 +1,9 @@
 # neug-rust
 
-A Safe Rust wrapper for the [alibaba/neug](https://github.com/alibaba/neug) C++ graph learning framework and database engine.
+A Safe Rust wrapper for the [alibaba/neug](https://github.com/alibaba/neug) C++ graph database engine.
+
+**High-performance embedded graph database for analytics and real-time transactions.**  
+[graphscope.io/neug](https://graphscope.io/docs/neug)
 
 ## Overview
 
