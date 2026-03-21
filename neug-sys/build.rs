@@ -62,6 +62,15 @@ fn main() {
         .define("BUILD_EXAMPLES", "OFF")
         .define("BUILD_HTTP_SERVER", "OFF");
 
+    // Automatically use sccache or ccache if available to speed up C++ builds
+    if Command::new("sccache").arg("--version").output().is_ok() {
+        config.define("CMAKE_C_COMPILER_LAUNCHER", "sccache");
+        config.define("CMAKE_CXX_COMPILER_LAUNCHER", "sccache");
+    } else if Command::new("ccache").arg("--version").output().is_ok() {
+        config.define("CMAKE_C_COMPILER_LAUNCHER", "ccache");
+        config.define("CMAKE_CXX_COMPILER_LAUNCHER", "ccache");
+    }
+
     // Use parallel building if configured, otherwise cmake crate defaults are used
     if let Ok(jobs) = env::var("ZVEC_BUILD_PARALLEL") {
         unsafe { env::set_var("CMAKE_BUILD_PARALLEL_LEVEL", jobs) };
