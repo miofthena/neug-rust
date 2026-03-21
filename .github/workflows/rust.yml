@@ -1,4 +1,4 @@
-name: Rust Build and Test
+name: Rust Build, Test, and Release
 
 on:
   push:
@@ -10,6 +10,10 @@ env:
   CARGO_TERM_COLOR: always
   # Limit parallel jobs to prevent OOM on standard GitHub runners
   ZVEC_BUILD_PARALLEL: 2
+
+permissions:
+  pull-requests: write
+  contents: write
 
 jobs:
   build_and_test:
@@ -29,8 +33,6 @@ jobs:
     - name: Set up Rust cache
       uses: Swatinem/rust-cache@v2
       with:
-        # Cache the target directory, but don't cache the massive C++ build artifacts
-        # unless necessary, as they might exceed the 10GB cache limit quickly.
         cache-on-failure: "true"
 
     - name: Check formatting
@@ -44,3 +46,30 @@ jobs:
 
     - name: Run Examples
       run: cargo run --example simple_example
+
+  release-plz:
+    name: Release-plz
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    # Only run release-plz on push to main, not on pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libssl-dev clang libgflags-dev libgoogle-glog-dev protobuf-compiler libprotobuf-dev libyaml-cpp-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run release-plz
+        uses: release-plz/action@v0.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
