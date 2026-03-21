@@ -1,0 +1,17 @@
+[package]
+name = "neug-rust"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Safe Rust bindings for the NeuG C++ graph database engine"
+repository.workspace = true
+readme = "../README.md"
+keywords = ["database", "graph", "neug", "ffi"]
+categories = ["database"]
+
+[dependencies]
+neug-sys = { path = "../neug-sys", version = "0.1.0" }
+
+[dev-dependencies]
+tempfile = "3.27.0"
