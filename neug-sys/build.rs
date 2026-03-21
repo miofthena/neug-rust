@@ -85,11 +85,12 @@ fn main() {
 
     // Compile the C API wrapper
     let mut build = cc::Build::new();
-    build.cpp(true)
-         .std("c++20")
-         .file("c_api.cpp")
-         .include(format!("{}/include", neug_dir.display()))
-         .include(format!("{}/include", dst.display()));
+    build
+        .cpp(true)
+        .std("c++20")
+        .file("c_api.cpp")
+        .include(format!("{}/include", neug_dir.display()))
+        .include(format!("{}/include", dst.display()));
 
     if Command::new("sccache").arg("--version").output().is_ok() {
         build.compiler("sccache c++");

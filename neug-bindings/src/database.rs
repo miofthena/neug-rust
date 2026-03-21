@@ -1,6 +1,8 @@
 use crate::connection::Connection;
 use crate::error::{Error, Result};
-use neug_sys::{neug_db_close, neug_db_connect, neug_db_open, neug_db_options_t, neug_get_last_error, neug_init};
+use neug_sys::{
+    neug_db_close, neug_db_connect, neug_db_open, neug_db_options_t, neug_get_last_error, neug_init,
+};
 use std::ffi::{CStr, CString};
 use std::path::Path;
 
@@ -65,7 +67,7 @@ impl Database {
         // to prevent it from spamming stdout/stderr with INFO messages
         // (like "Closing connection" on every benchmark iteration).
         unsafe { std::env::set_var("GLOG_minloglevel", "2") }; // 0=INFO, 1=WARNING, 2=ERROR
-        
+
         unsafe { neug_init() };
 
         let c_path = CString::new(options.db_path.clone()).unwrap();
@@ -110,7 +112,7 @@ impl Database {
         }
 
         let conn_ptr = unsafe { neug_db_connect(self.inner) };
-        
+
         if conn_ptr.is_null() {
             let error_msg = unsafe {
                 let err_ptr = neug_get_last_error();

@@ -1,5 +1,7 @@
 use crate::error::{Error, Result};
-use neug_sys::{neug_conn_close, neug_conn_execute, neug_result_free, neug_result_get_error, neug_result_is_ok};
+use neug_sys::{
+    neug_conn_close, neug_conn_execute, neug_result_free, neug_result_get_error, neug_result_is_ok,
+};
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 
@@ -78,15 +80,18 @@ impl Connection {
             return Err(Error::ConnectionClosed);
         }
 
-        let c_query = CString::new(query).map_err(|_| Error::InvalidArgument("Query contains null byte".into()))?;
-        
+        let c_query = CString::new(query)
+            .map_err(|_| Error::InvalidArgument("Query contains null byte".into()))?;
+
         let c_mode = access_mode.map(|m| CString::new(m.as_str()).unwrap());
         let c_mode_ptr = c_mode.as_ref().map_or(std::ptr::null(), |m| m.as_ptr());
 
         let res_ptr = unsafe { neug_conn_execute(self.inner, c_query.as_ptr(), c_mode_ptr) };
 
         if res_ptr.is_null() {
-            return Err(Error::ExecutionFailed("Failed to invoke execute on engine".to_string()));
+            return Err(Error::ExecutionFailed(
+                "Failed to invoke execute on engine".to_string(),
+            ));
         }
 
         let is_ok = unsafe { neug_result_is_ok(res_ptr) };

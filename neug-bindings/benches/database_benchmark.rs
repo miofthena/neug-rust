@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use neug_rust::{AccessMode, Database, Mode};
 use std::collections::HashMap;
 use tempfile::tempdir;
@@ -24,8 +24,10 @@ fn bench_query_dispatch(c: &mut Criterion) {
     let conn = db.connect().unwrap();
 
     // Setup schema
-    conn.execute("CREATE NODE TABLE User(id INT64, name STRING, age INT64, PRIMARY KEY(id));").unwrap();
-    conn.execute("CREATE REL TABLE KNOWS(FROM User TO User);").unwrap();
+    conn.execute("CREATE NODE TABLE User(id INT64, name STRING, age INT64, PRIMARY KEY(id));")
+        .unwrap();
+    conn.execute("CREATE REL TABLE KNOWS(FROM User TO User);")
+        .unwrap();
 
     // Benchmarking the overhead of string passing and FFI boundary preparation
     let query = "MATCH (n:User {id: 123})-[:KNOWS]->(f:User) RETURN f.name, f.age;";
@@ -40,9 +42,5 @@ fn bench_query_dispatch(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    bench_connection_lifecycle,
-    bench_query_dispatch
-);
+criterion_group!(benches, bench_connection_lifecycle, bench_query_dispatch);
 criterion_main!(benches);
