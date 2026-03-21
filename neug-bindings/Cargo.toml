@@ -15,4 +15,9 @@ neug-sys = { path = "../neug-sys", version = "0.1.0" }
 thiserror = "2.0.18"
 
 [dev-dependencies]
+criterion = "0.8.2"
 tempfile = "3.27.0"
+
+[[bench]]
+name = "database_benchmark"
+harness = false
