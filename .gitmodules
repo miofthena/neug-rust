@@ -1,0 +1,3 @@
+[submodule "neug-cpp"]
+	path = neug-cpp
+	url = https://github.com/alibaba/neug.git
