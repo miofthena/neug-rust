@@ -83,8 +83,25 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
     println!("cargo:rustc-link-lib=dylib=neug");
 
+    // Compile the C API wrapper
+    let mut build = cc::Build::new();
+    build.cpp(true)
+         .std("c++20")
+         .file("c_api.cpp")
+         .include(format!("{}/include", neug_dir.display()))
+         .include(format!("{}/include", dst.display()));
+
+    if Command::new("sccache").arg("--version").output().is_ok() {
+        build.compiler("sccache c++");
+    } else if Command::new("ccache").arg("--version").output().is_ok() {
+        build.compiler("ccache c++");
+    }
+
+    build.compile("neug_c_api");
+
     // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed=wrapper.h");
+    println!("cargo:rerun-if-changed=c_api.h");
+    println!("cargo:rerun-if-changed=c_api.cpp");
 
     if neug_dir == local_neug_dir {
         println!("cargo:rerun-if-changed=../neug-cpp/CMakeLists.txt");
@@ -92,7 +109,7 @@ fn main() {
 
     // Generate bindings using bindgen
     let bindings = bindgen::Builder::default()
-        .header("wrapper.h")
+        .header("c_api.h")
         .clang_arg("-xc++")
         .clang_arg("-std=c++20")
         .clang_arg(format!("-I{}/include", dst.display()))
@@ -100,17 +117,12 @@ fn main() {
         .clang_arg(format!("-I{}/include", neug_dir.display()))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         // Only generate bindings for neug
-        .allowlist_type("neug::.*")
-        .allowlist_function("neug::.*")
-        .allowlist_var("neug::.*")
-        .blocklist_item("std::.*")
-        .blocklist_item("google::.*")
-        .blocklist_item("absl::.*")
-        .blocklist_item("arrow::.*")
+        .allowlist_type("neug_.*")
+        .allowlist_function("neug_.*")
+        .allowlist_var("neug_.*")
         .layout_tests(false)
         .generate()
         .expect("Unable to generate bindings");
-
     bindings
         .write_to_file(out_dir.join("bindings.rs"))
         .expect("Couldn't write bindings!");

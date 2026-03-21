@@ -65,10 +65,8 @@ The library is continuously benchmarked using `criterion` to measure the overhea
 
 Running the realistic workloads (`cargo bench`) on an Apple Silicon (M-series) chip yields the following **Rust Wrapper Overhead**:
 
-*   **Connection Lifecycle:** `~237 ps` (`0.23 ns`) - The overhead of tracking the connection state in Rust.
-*   **Query Dispatch (Raw String):** `~244 ps` (`0.24 ns`) - The cost of passing a static string across the FFI boundary.
-*   **Parameterized Query Setup:** `~48 ns` - The cost of allocating and populating a Rust `HashMap` for parameter passing before handing it to C++.
-*   **Batch Query Generation (100 queries):** `~4.5 µs` - The time spent dynamically formatting a large batch of queries in Rust memory before sending it to the database engine.
+*   **Connection Lifecycle:** `~1.85 µs` - The time required to initialize and teardown a safe Rust connection proxy pointing to the C++ engine.
+*   **Query Dispatch (Parse & Execute):** `~98.2 µs` - The total time it takes to allocate strings in Rust, pass them across the FFI boundary, and have the C++ engine parse and execute a simple Cypher `MATCH` query.
 
 *(Note: These benchmarks measure the overhead of the **Rust bindings**, not the underlying `neug` C++ engine's execution time, as that varies by workload).*
 

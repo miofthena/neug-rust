@@ -1,5 +1,7 @@
 use crate::connection::Connection;
 use crate::error::{Error, Result};
+use neug_sys::{neug_db_close, neug_db_connect, neug_db_open, neug_db_options_t, neug_get_last_error, neug_init};
+use std::ffi::{CStr, CString};
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,11 +38,14 @@ impl Default for DatabaseOptions {
 }
 
 pub struct Database {
-    // In a real implementation, this would hold the FFI pointer/handle to the C++ NeugDB object.
-    // e.g., inner: cxx::UniquePtr<ffi::NeugDB>
+    // Pointer to the C++ NeugDB object via our C wrapper
+    inner: neug_sys::neug_db_t,
     options: DatabaseOptions,
-    is_closed: bool,
 }
+
+// Ensure Database can be sent across threads as per NeugDB C++ thread-safety semantics
+unsafe impl Send for Database {}
+unsafe impl Sync for Database {}
 
 impl Database {
     /// Opens a database at the specified path.
@@ -56,12 +61,40 @@ impl Database {
 
     /// Opens a database with full options.
     pub fn with_options(options: DatabaseOptions) -> Result<Self> {
-        // Here you would initialize the C++ NeugDB object.
-        // let inner = ffi::new_neug_db(options.db_path.clone(), options.mode.as_str(), options.max_thread_num, options.checkpoint_on_close)?;
+        // Set environment variables for the underlying C++ glog library
+        // to prevent it from spamming stdout/stderr with INFO messages
+        // (like "Closing connection" on every benchmark iteration).
+        unsafe { std::env::set_var("GLOG_minloglevel", "2") }; // 0=INFO, 1=WARNING, 2=ERROR
+        
+        unsafe { neug_init() };
+
+        let c_path = CString::new(options.db_path.clone()).unwrap();
+        let c_mode = CString::new(options.mode.as_str()).unwrap();
+
+        let c_options = neug_db_options_t {
+            db_path: c_path.as_ptr(),
+            mode: c_mode.as_ptr(),
+            max_thread_num: options.max_thread_num,
+            checkpoint_on_close: options.checkpoint_on_close,
+        };
+
+        let db_ptr = unsafe { neug_db_open(&c_options) };
+
+        if db_ptr.is_null() {
+            let error_msg = unsafe {
+                let err_ptr = neug_get_last_error();
+                if err_ptr.is_null() {
+                    "Unknown error".to_string()
+                } else {
+                    CStr::from_ptr(err_ptr).to_string_lossy().into_owned()
+                }
+            };
+            return Err(Error::InitializationFailed(error_msg));
+        }
 
         Ok(Self {
+            inner: db_ptr,
             options,
-            is_closed: false,
         })
     }
 
@@ -72,20 +105,32 @@ impl Database {
 
     /// Creates a new connection to the database.
     pub fn connect(&self) -> Result<Connection> {
-        if self.is_closed {
+        if self.inner.is_null() {
             return Err(Error::DatabaseClosed);
         }
 
-        // let conn_inner = ffi::db_connect(self.inner.as_ref())?;
+        let conn_ptr = unsafe { neug_db_connect(self.inner) };
+        
+        if conn_ptr.is_null() {
+            let error_msg = unsafe {
+                let err_ptr = neug_get_last_error();
+                if err_ptr.is_null() {
+                    "Failed to create connection".to_string()
+                } else {
+                    CStr::from_ptr(err_ptr).to_string_lossy().into_owned()
+                }
+            };
+            return Err(Error::InitializationFailed(error_msg));
+        }
 
-        Ok(Connection::new())
+        Ok(Connection::new(conn_ptr))
     }
 
     /// Close the database.
     pub fn close(&mut self) {
-        if !self.is_closed {
-            // ffi::db_close(self.inner.pin_mut());
-            self.is_closed = true;
+        if !self.inner.is_null() {
+            unsafe { neug_db_close(self.inner) };
+            self.inner = std::ptr::null_mut();
         }
     }
 }
