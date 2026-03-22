@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 use neug_sys::{
     neug_conn_close, neug_conn_execute, neug_result_free, neug_result_get_error, neug_result_is_ok,
+    neug_result_to_string,
 };
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
@@ -33,7 +34,20 @@ pub struct QueryResult {
 }
 
 impl QueryResult {
-    // Methods to iterate over the result records would go here.
+    /// Returns the result as a string
+    pub fn to_string(&self) -> String {
+        if self.inner.is_null() {
+            return String::new();
+        }
+        unsafe {
+            let ptr = neug_result_to_string(self.inner);
+            if ptr.is_null() {
+                String::new()
+            } else {
+                CStr::from_ptr(ptr).to_string_lossy().into_owned()
+            }
+        }
+    }
 }
 
 impl Drop for QueryResult {

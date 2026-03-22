@@ -7,6 +7,7 @@ license.workspace = true
 links = "neug"
 description = "Raw FFI bindings for NeuG C++ graph database engine"
 repository.workspace = true
+readme = "README.md"
 
 [build-dependencies]
 bindgen = "0.72.1"

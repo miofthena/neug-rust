@@ -5,6 +5,8 @@
 #include <thread>
 #include <mutex>
 #include <iostream>
+#include <cstdlib>
+#include <glog/logging.h>
 
 // Thread-local storage for error messages
 thread_local std::string g_last_error;
@@ -12,7 +14,8 @@ thread_local std::string g_last_error;
 extern "C" {
 
 void neug_init(void) {
-    // No-op. Handled by Rust stderr redirection.
+    setenv("GLOG_minloglevel", "3", 1);
+    setenv("GLOG_stderrthreshold", "3", 1);
 }
 
 const char* neug_get_last_error() {
@@ -83,9 +86,6 @@ void neug_conn_close(neug_db_t db, neug_conn_t conn) {
              auto* neug_db = static_cast<neug::NeugDB*>(db);
              neug_db->RemoveConnection(*conn_ptr);
         }
-        if (*conn_ptr) {
-             (*conn_ptr)->Close();
-        }
         delete conn_ptr; // Decrements ref count
     }
 }
@@ -94,6 +94,7 @@ void neug_conn_close(neug_db_t db, neug_conn_t conn) {
 struct neug_result_wrapper {
     std::unique_ptr<neug::QueryResult> result;
     std::string error_msg;
+    std::string result_str;
     bool is_ok;
 };
 
@@ -145,6 +146,16 @@ const char* neug_result_get_error(neug_result_t result) {
     if (!result) return "Invalid result handle";
     auto* wrapper = static_cast<neug_result_wrapper*>(result);
     return wrapper->error_msg.c_str();
+}
+
+const char* neug_result_to_string(neug_result_t result) {
+    if (!result) return "";
+    auto* wrapper = static_cast<neug_result_wrapper*>(result);
+    if (wrapper->is_ok && wrapper->result) {
+        wrapper->result_str = wrapper->result->ToString();
+        return wrapper->result_str.c_str();
+    }
+    return "";
 }
 
 } // extern "C"

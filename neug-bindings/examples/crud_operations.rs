@@ -25,12 +25,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     println!("4. Querying Data (Read)...");
-    let _res = conn.execute("MATCH (u:user) RETURN u.name AS Name, u.age AS Age;")?;
-    println!("   > Queried all users successfully.");
-    // In a real implementation, we would iterate over `_res` here.
+    let res = conn.execute("MATCH (u:user) RETURN u.name AS Name, u.age AS Age;")?;
+    println!("   > Queried all users successfully. Results:\n{}", res.to_string());
 
-    let _followers = conn.execute("MATCH (a)-[:follows]->(b) RETURN a.name, b.name;")?;
-    println!("   > Queried followers graph successfully.");
+    let followers = conn.execute("MATCH (a)-[:follows]->(b) RETURN a.name, b.name;")?;
+    println!("   > Queried followers graph successfully. Results:\n{}", followers.to_string());
 
     println!("5. Updating Properties (Update)...");
     conn.execute("MATCH (u:user {id: 1}) SET u.age = 26;")?;

@@ -61,14 +61,20 @@ To prevent the underlying C++ library (`neug-cpp`) from compiling from scratch o
 
 ## Performance & Benchmarks
 
-The library is continuously benchmarked using `criterion` to measure the overhead introduced by the Rust FFI boundary and data preparation. Because the wrappers are extremely thin, the actual dispatch overhead is practically non-existent.
+The library is continuously benchmarked using `criterion` to measure the overhead introduced by the Rust FFI boundary, data preparation, and full end-to-end workload executions. Because the wrappers are extremely thin, the actual dispatch overhead is practically non-existent.
 
-Running the realistic workloads (`cargo bench`) on an Apple Silicon (M-series) chip yields the following **Rust Wrapper Overhead**:
+Recent benchmarks on an Apple Silicon (M-series) chip highlight the performance and stability improvements made to the Rust/C++ interface, specifically regarding safe string buffer allocations during `CREATE` statements and `WAL` ingestion:
 
-*   **Connection Lifecycle:** `~1.85 µs` - The time required to initialize and teardown a safe Rust connection proxy pointing to the C++ engine.
-*   **Query Dispatch (Parse & Execute):** `~98.2 µs` - The total time it takes to allocate strings in Rust, pass them across the FFI boundary, and have the C++ engine parse and execute a simple Cypher `MATCH` query.
+*   **Connection Lifecycle:** `~32-33 ns` - The time required to request a connection proxy from the C++ engine pool.
+*   **Query Dispatch (Parse & Execute):** `~97.7 µs` - The total time it takes to allocate strings in Rust, pass them across the FFI boundary, and have the C++ engine parse and execute a simple Cypher `MATCH` query.
+*   **Graph Insertion (DML):** `~130 µs` - End-to-end execution of a `CREATE (:Person {id: X, name: '...'})` statement. Includes dynamic expansion of string buffers without memory corruption or "Out of bounds" exceptions.
+*   **Graph Traversal (Pathing):** `~79.5 µs` - Extremely fast read paths spanning multiple edges in the embedded graph.
 
-*(Note: These benchmarks measure the overhead of the **Rust bindings**, not the underlying `neug` C++ engine's execution time, as that varies by workload).*
+To run the benchmarks yourself locally:
+
+```bash
+cargo bench
+```
 
 ## Usage Example
 

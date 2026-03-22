@@ -45,6 +45,7 @@ neug_result_t neug_conn_execute(neug_conn_t conn, const char* query, const char*
 void neug_result_free(neug_result_t result);
 bool neug_result_is_ok(neug_result_t result);
 const char* neug_result_get_error(neug_result_t result);
+const char* neug_result_to_string(neug_result_t result);
 // Future: Add methods to iterate over records in the result.
 
 #ifdef __cplusplus
