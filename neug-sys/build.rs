@@ -32,25 +32,36 @@ fn main() {
             panic!("rsync failed");
         }
 
-        // Apply our custom patch
-        let patch_path = manifest_dir.join("patches/0001-fix-dml-buffer-overflows.patch");
-        if patch_path.exists() {
-            // Check if already patched to avoid patch failure
-            let check_status = Command::new("patch")
-                .current_dir(&build_neug_dir)
-                .args(["-p1", "-R", "--dry-run", "-i", patch_path.to_str().unwrap()])
-                .status()
-                .unwrap_or_else(|_| panic!("Failed to run patch check"));
+        // Apply our custom patches
+        let patches_dir = manifest_dir.join("patches");
+        if patches_dir.exists() {
+            let mut patches: Vec<_> = std::fs::read_dir(&patches_dir)
+                .unwrap()
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.extension().map_or(false, |ext| ext == "patch"))
+                .collect();
+            patches.sort();
 
-            if !check_status.success() {
-                println!("cargo:warning=Applying patch 0001-fix-dml-buffer-overflows.patch");
-                let patch_status = Command::new("patch")
+            for patch_path in patches {
+                // Check if already patched to avoid patch failure
+                let check_status = Command::new("patch")
                     .current_dir(&build_neug_dir)
-                    .args(["-p1", "-N", "-i", patch_path.to_str().unwrap()])
+                    .args(["-p1", "-R", "--dry-run", "-i", patch_path.to_str().unwrap()])
                     .status()
-                    .expect("Failed to apply patch");
-                if !patch_status.success() {
-                    println!("cargo:warning=Patch might have already been applied or failed.");
+                    .unwrap_or_else(|_| panic!("Failed to run patch check"));
+
+                if !check_status.success() {
+                    let patch_name = patch_path.file_name().unwrap().to_string_lossy();
+                    println!("cargo:warning=Applying patch {}", patch_name);
+                    let patch_status = Command::new("patch")
+                        .current_dir(&build_neug_dir)
+                        .args(["-p1", "-N", "-i", patch_path.to_str().unwrap()])
+                        .status()
+                        .expect("Failed to apply patch");
+                    if !patch_status.success() {
+                        println!("cargo:warning=Patch {} might have already been applied or failed.", patch_name);
+                    }
                 }
             }
         }
@@ -92,6 +103,40 @@ fn main() {
                 "https://github.com/apache/arrow/archive/refs/tags/apache-arrow-${ARROW_VERSION}.tar.gz"
             );
             std::fs::write(&arrow_cmake, new_content).unwrap();
+
+            // Apply our custom patches
+            let patches_dir = manifest_dir.join("patches");
+            if patches_dir.exists() {
+                let mut patches: Vec<_> = std::fs::read_dir(&patches_dir)
+                    .unwrap()
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().map_or(false, |ext| ext == "patch"))
+                    .collect();
+                patches.sort();
+
+                for patch_path in patches {
+                    // Check if already patched to avoid patch failure
+                    let check_status = Command::new("patch")
+                        .current_dir(&download_dir)
+                        .args(["-p1", "-R", "--dry-run", "-i", patch_path.to_str().unwrap()])
+                        .status()
+                        .unwrap_or_else(|_| panic!("Failed to run patch check"));
+
+                    if !check_status.success() {
+                        let patch_name = patch_path.file_name().unwrap().to_string_lossy();
+                        println!("cargo:warning=Applying patch {}", patch_name);
+                        let patch_status = Command::new("patch")
+                            .current_dir(&download_dir)
+                            .args(["-p1", "-N", "-i", patch_path.to_str().unwrap()])
+                            .status()
+                            .expect("Failed to apply patch");
+                        if !patch_status.success() {
+                            println!("cargo:warning=Patch {} might have already been applied or failed.", patch_name);
+                        }
+                    }
+                }
+            }
         }
         download_dir
     };

@@ -1,0 +1,15 @@
+diff --git a/cmake/BuildGlogAsThirdParty.cmake b/cmake/BuildGlogAsThirdParty.cmake
+index 8e395020..bcc7fdfa 100644
+--- a/cmake/BuildGlogAsThirdParty.cmake
++++ b/cmake/BuildGlogAsThirdParty.cmake
+@@ -19,6 +19,10 @@ function (build_glog_as_third_party)
+     set(WITH_GFLAGS OFF CACHE BOOL "Build glog without gflags" FORCE)
+     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static library" FORCE)
+     set(BUILD_TESTING OFF CACHE BOOL "Build glog tests" FORCE)
++    
++    # Hide gflags_FOUND from glog to workaround a bug where it links gflags anyway
++    set(gflags_FOUND FALSE)
++
+     add_subdirectory(third_party/glog)
+     include_directories(third_party/glog/src)
+     include_directories(${CMAKE_CURRENT_BINARY_DIR}/third_party/glog/) # For generated headers
