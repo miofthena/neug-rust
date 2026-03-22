@@ -12,7 +12,7 @@ categories = ["database"]
 
 [dependencies]
 libc = "0.2.183"
-neug-sys = { path = "../neug-sys", version = "0.1.0" }
+neug-sys = { path = "../neug-sys", version = "0.1.1" }
 thiserror = "2.0.18"
 
 [dev-dependencies]
