@@ -68,6 +68,11 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+
       - name: Run release-plz
         uses: release-plz/action@v0.5
         env:
