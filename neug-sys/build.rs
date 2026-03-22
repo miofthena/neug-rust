@@ -60,7 +60,10 @@ fn main() {
                         .status()
                         .expect("Failed to apply patch");
                     if !patch_status.success() {
-                        println!("cargo:warning=Patch {} might have already been applied or failed.", patch_name);
+                        println!(
+                            "cargo:warning=Patch {} might have already been applied or failed.",
+                            patch_name
+                        );
                     }
                 }
             }
@@ -132,7 +135,10 @@ fn main() {
                             .status()
                             .expect("Failed to apply patch");
                         if !patch_status.success() {
-                            println!("cargo:warning=Patch {} might have already been applied or failed.", patch_name);
+                            println!(
+                                "cargo:warning=Patch {} might have already been applied or failed.",
+                                patch_name
+                            );
                         }
                     }
                 }
