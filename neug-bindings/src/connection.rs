@@ -72,7 +72,10 @@ unsafe impl Sync for Connection {}
 
 impl Connection {
     pub(crate) fn new(ptr: neug_sys::neug_conn_t, db_ptr: neug_sys::neug_db_t) -> Self {
-        Self { inner: ptr, db_inner: db_ptr }
+        Self {
+            inner: ptr,
+            db_inner: db_ptr,
+        }
     }
 
     /// Checks if the connection is currently open.

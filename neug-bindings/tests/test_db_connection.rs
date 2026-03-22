@@ -98,7 +98,7 @@ fn test_parallel_query_executions() {
     let db_path = dir.path().join("parallel_query_db");
 
     let mut db = Database::open(db_path, Mode::ReadWrite).unwrap();
-    
+
     let conn = Arc::new(db.connect().unwrap());
     conn.execute("CREATE NODE TABLE person(id INT64, name STRING, PRIMARY KEY(id));")
         .unwrap();
