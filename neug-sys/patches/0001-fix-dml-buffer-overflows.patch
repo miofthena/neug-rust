@@ -1,0 +1,49 @@
+From 7fecd39159fc8f98b5c4e8c5c5fed06414f742d3 Mon Sep 17 00:00:00 2001
+From: Boris Aksenov <aksenov@corp.finam.ru>
+Date: Sun, 22 Mar 2026 14:45:18 +0300
+Subject: [PATCH] fix: safely allocate variable-length string buffers during
+ DML operations
+
+---
+ src/storages/graph/graph_interface.cc | 2 +-
+ src/transaction/insert_transaction.cc | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/storages/graph/graph_interface.cc b/src/storages/graph/graph_interface.cc
+index d42cffba..bfbf02cd 100644
+--- a/src/storages/graph/graph_interface.cc
++++ b/src/storages/graph/graph_interface.cc
+@@ -49,7 +49,7 @@ bool StorageAPUpdateInterface::AddVertex(label_t label, const Property& id,
+     }
+   }
+ 
+-  auto status = graph_.AddVertex(label, id, props, vid, neug::timestamp_t(0));
++  auto status = graph_.AddVertex(label, id, props, vid, neug::timestamp_t(0), true);
+   if (!status.ok()) {
+     LOG(ERROR) << "AddVertex failed: " << status.ToString();
+   }
+diff --git a/src/transaction/insert_transaction.cc b/src/transaction/insert_transaction.cc
+index 8213828a..c0c5a696 100644
+--- a/src/transaction/insert_transaction.cc
++++ b/src/transaction/insert_transaction.cc
+@@ -187,7 +187,7 @@ void InsertTransaction::IngestWal(PropertyGraph& graph, uint32_t timestamp,
+       arc >> redo;
+       vid_t vid;
+       auto ret =
+-          graph.AddVertex(redo.label, redo.oid, redo.props, vid, timestamp);
++          graph.AddVertex(redo.label, redo.oid, redo.props, vid, timestamp, true);
+       if (!ret.ok()) {
+         THROW_STORAGE_EXCEPTION("Failed to add vertex during WAL ingestion: " +
+                                 ret.ToString());
+@@ -201,7 +201,7 @@ void InsertTransaction::IngestWal(PropertyGraph& graph, uint32_t timestamp,
+       CHECK(get_vertex_with_retries(graph, redo.dst_label, redo.dst, dst_lid,
+                                     timestamp));
+       graph.AddEdge(redo.src_label, src_lid, redo.dst_label, dst_lid,
+-                    redo.edge_label, redo.properties, timestamp, alloc);
++                    redo.edge_label, redo.properties, timestamp, alloc, true);
+     } else {
+       LOG(FATAL) << "Unexpected op-" << static_cast<int>(op_type);
+     }
+-- 
+2.50.1 (Apple Git-155)
+

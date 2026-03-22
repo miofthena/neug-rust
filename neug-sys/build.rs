@@ -8,12 +8,53 @@ fn main() {
 
     // Check if we are in the local workspace with the submodule
     let local_neug_dir = manifest_dir.parent().unwrap().join("neug-cpp");
+    let build_neug_dir = out_dir.join("neug-cpp-src");
+
     let neug_dir = if local_neug_dir.join("CMakeLists.txt").exists() {
         println!(
             "cargo:warning=Using local neug-cpp submodule at {}",
             local_neug_dir.display()
         );
-        local_neug_dir.clone()
+
+        // We sync local repo to OUT_DIR so we can patch it without modifying the git submodule working tree
+        let status = Command::new("rsync")
+            .args([
+                "-a",
+                "--exclude=.git",
+                "--exclude=build",
+                &format!("{}/", local_neug_dir.display()),
+                &format!("{}/", build_neug_dir.display()),
+            ])
+            .status()
+            .expect("Failed to rsync local neug-cpp to OUT_DIR");
+
+        if !status.success() {
+            panic!("rsync failed");
+        }
+
+        // Apply our custom patch
+        let patch_path = manifest_dir.join("patches/0001-fix-dml-buffer-overflows.patch");
+        if patch_path.exists() {
+            // Check if already patched to avoid patch failure
+            let check_status = Command::new("patch")
+                .current_dir(&build_neug_dir)
+                .args(["-p1", "-R", "--dry-run", "-i", patch_path.to_str().unwrap()])
+                .status()
+                .unwrap_or_else(|_| panic!("Failed to run patch check"));
+
+            if !check_status.success() {
+                println!("cargo:warning=Applying patch 0001-fix-dml-buffer-overflows.patch");
+                let patch_status = Command::new("patch")
+                    .current_dir(&build_neug_dir)
+                    .args(["-p1", "-N", "-i", patch_path.to_str().unwrap()])
+                    .status()
+                    .expect("Failed to apply patch");
+                if !patch_status.success() {
+                    println!("cargo:warning=Patch might have already been applied or failed.");
+                }
+            }
+        }
+        build_neug_dir
     } else {
         // We are likely being built from crates.io. Download it into OUT_DIR.
         let download_dir = out_dir.join("neug-cpp");
