@@ -5,6 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Inter-process communication protocol for the NeuG graph database engine sidecar architecture."
 
 [dependencies]
 bincode = "1.3.3"
