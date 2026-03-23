@@ -85,12 +85,14 @@ impl Database {
 
     /// Creates a new connection to the database.
     pub fn connect(&self) -> Result<Connection> {
-        let res = self.worker.send_request(RequestPayload::Connect {
-            db_id: self.db_id,
-        })?;
+        let res = self
+            .worker
+            .send_request(RequestPayload::Connect { db_id: self.db_id })?;
 
         match res {
-            ResponsePayload::OkConn { conn_id } => Ok(Connection::new(conn_id, self.worker.clone())),
+            ResponsePayload::OkConn { conn_id } => {
+                Ok(Connection::new(conn_id, self.worker.clone()))
+            }
             ResponsePayload::Error(msg) => Err(Error::InitializationFailed(msg)),
             _ => Err(Error::InitializationFailed("Unexpected response".into())),
         }
@@ -99,9 +101,9 @@ impl Database {
     /// Close the database.
     pub fn close(&mut self) {
         if self.db_id != 0 {
-            let _ = self.worker.send_request(RequestPayload::CloseDb {
-                db_id: self.db_id,
-            });
+            let _ = self
+                .worker
+                .send_request(RequestPayload::CloseDb { db_id: self.db_id });
             self.db_id = 0;
         }
     }
