@@ -7,7 +7,7 @@ index 6e43033f..49669a39 100644
        // Use grapheme iterator to identify bytes of utf8 char and increment once
        // for each char.
 -      utf8proc::utf8proc_grapheme_callback(
-+      utf8proc_grapheme_callback(
++      neug::utf8proc::utf8proc_grapheme_callback(
            inputString.c_str(), totalByteLength,
            [&](size_t /*start*/, size_t /*end*/) {
              length++;
