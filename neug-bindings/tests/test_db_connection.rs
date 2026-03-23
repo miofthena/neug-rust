@@ -136,7 +136,7 @@ fn test_parallel_query_executions() {
 
 #[test]
 fn test_access_mode() {
-    use neug_rust::AccessMode;
+    use neug_rust::connection::AccessMode;
 
     let dir = tempdir().unwrap();
     let db_path = dir.path().join("access_mode_db");
