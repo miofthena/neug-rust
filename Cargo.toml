@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "neug-sys",
-    "neug-bindings", "neug-benchmarks",
+    "neug-bindings", "neug-benchmarks", "neug-protocol",
 ]
 resolver = "2"
 

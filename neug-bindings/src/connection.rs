@@ -1,10 +1,8 @@
 use crate::error::{Error, Result};
-use neug_sys::{
-    neug_conn_close, neug_conn_execute, neug_result_free, neug_result_get_error, neug_result_is_ok,
-    neug_result_to_string,
-};
+use crate::worker::WorkerClient;
+use neug_protocol::{RequestPayload, ResponsePayload};
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::sync::Arc;
 
 /// Represents the access mode for a query.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,58 +27,30 @@ impl AccessMode {
 /// Represents the result of a query.
 #[derive(Debug)]
 pub struct QueryResult {
-    // Pointer to the C++ QueryResult wrapper
-    inner: neug_sys::neug_result_t,
+    result_string: String,
 }
 
 impl QueryResult {
     /// Returns the result as a string
     pub fn to_string(&self) -> String {
-        if self.inner.is_null() {
-            return String::new();
-        }
-        unsafe {
-            let ptr = neug_result_to_string(self.inner);
-            if ptr.is_null() {
-                String::new()
-            } else {
-                CStr::from_ptr(ptr).to_string_lossy().into_owned()
-            }
-        }
-    }
-}
-
-impl Drop for QueryResult {
-    fn drop(&mut self) {
-        if !self.inner.is_null() {
-            unsafe { neug_result_free(self.inner) };
-            self.inner = std::ptr::null_mut();
-        }
+        self.result_string.clone()
     }
 }
 
 /// Represents a connection to the NeuG database.
 pub struct Connection {
-    // Pointer to the C++ Connection object via our C wrapper
-    inner: neug_sys::neug_conn_t,
-    db_inner: neug_sys::neug_db_t,
+    conn_id: u64,
+    worker: Arc<WorkerClient>,
 }
 
-// Connections in neug can be sent across threads and shared concurrently
-unsafe impl Send for Connection {}
-unsafe impl Sync for Connection {}
-
 impl Connection {
-    pub(crate) fn new(ptr: neug_sys::neug_conn_t, db_ptr: neug_sys::neug_db_t) -> Self {
-        Self {
-            inner: ptr,
-            db_inner: db_ptr,
-        }
+    pub(crate) fn new(conn_id: u64, worker: Arc<WorkerClient>) -> Self {
+        Self { conn_id, worker }
     }
 
     /// Checks if the connection is currently open.
     pub fn is_open(&self) -> bool {
-        !self.inner.is_null()
+        self.conn_id != 0
     }
 
     /// Executes a Cypher query on the database.
@@ -92,49 +62,32 @@ impl Connection {
     pub fn execute_with_options(
         &self,
         query: &str,
-        access_mode: Option<AccessMode>,
+        _access_mode: Option<AccessMode>,
         _parameters: Option<&HashMap<String, String>>, // Future: implement parameter mapping
     ) -> Result<QueryResult> {
         if !self.is_open() {
             return Err(Error::ConnectionClosed);
         }
 
-        let c_query = CString::new(query)
-            .map_err(|_| Error::InvalidArgument("Query contains null byte".into()))?;
+        let res = self.worker.send_request(RequestPayload::Execute {
+            conn_id: self.conn_id,
+            query: query.to_string(),
+        })?;
 
-        let c_mode = access_mode.map(|m| CString::new(m.as_str()).unwrap());
-        let c_mode_ptr = c_mode.as_ref().map_or(std::ptr::null(), |m| m.as_ptr());
-
-        let res_ptr = unsafe { neug_conn_execute(self.inner, c_query.as_ptr(), c_mode_ptr) };
-
-        if res_ptr.is_null() {
-            return Err(Error::ExecutionFailed(
-                "Failed to invoke execute on engine".to_string(),
-            ));
+        match res {
+            ResponsePayload::OkResult { result_string } => Ok(QueryResult { result_string }),
+            ResponsePayload::Error(msg) => Err(Error::ExecutionFailed(msg)),
+            _ => Err(Error::ExecutionFailed("Unexpected response".into())),
         }
-
-        let is_ok = unsafe { neug_result_is_ok(res_ptr) };
-        if !is_ok {
-            let error_msg = unsafe {
-                let err_ptr = neug_result_get_error(res_ptr);
-                if err_ptr.is_null() {
-                    "Unknown execution error".to_string()
-                } else {
-                    CStr::from_ptr(err_ptr).to_string_lossy().into_owned()
-                }
-            };
-            unsafe { neug_result_free(res_ptr) };
-            return Err(Error::ExecutionFailed(error_msg));
-        }
-
-        Ok(QueryResult { inner: res_ptr })
     }
 
     /// Closes the connection.
     pub fn close(&mut self) {
-        if !self.inner.is_null() {
-            unsafe { neug_conn_close(self.db_inner, self.inner) };
-            self.inner = std::ptr::null_mut();
+        if self.conn_id != 0 {
+            let _ = self.worker.send_request(RequestPayload::CloseConn {
+                conn_id: self.conn_id,
+            });
+            self.conn_id = 0;
         }
     }
 }

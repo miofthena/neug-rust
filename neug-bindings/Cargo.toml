@@ -11,8 +11,10 @@ keywords = ["database", "graph", "neug", "ffi"]
 categories = ["database"]
 
 [dependencies]
+bincode = "1.3.3"
 libc = "0.2.183"
-neug-sys = { path = "../neug-sys", version = "0.1.0" }
+neug-protocol = { path = "../neug-protocol", version = "0.1.0" }
+serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"
 
 [dev-dependencies]

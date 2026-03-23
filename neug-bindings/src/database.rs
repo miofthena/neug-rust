@@ -1,10 +1,9 @@
 use crate::connection::Connection;
 use crate::error::{Error, Result};
-use neug_sys::{
-    neug_db_close, neug_db_connect, neug_db_open, neug_db_options_t, neug_get_last_error, neug_init,
-};
-use std::ffi::{CStr, CString};
+use crate::worker::WorkerClient;
+use neug_protocol::{RequestPayload, ResponsePayload};
 use std::path::Path;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -40,14 +39,10 @@ impl Default for DatabaseOptions {
 }
 
 pub struct Database {
-    // Pointer to the C++ NeugDB object via our C wrapper
-    inner: neug_sys::neug_db_t,
+    db_id: u64,
+    worker: Arc<WorkerClient>,
     options: DatabaseOptions,
 }
-
-// Ensure Database can be sent across threads as per NeugDB C++ thread-safety semantics
-unsafe impl Send for Database {}
-unsafe impl Sync for Database {}
 
 impl Database {
     /// Opens a database at the specified path.
@@ -63,36 +58,24 @@ impl Database {
 
     /// Opens a database with full options.
     pub fn with_options(options: DatabaseOptions) -> Result<Self> {
-        unsafe { neug_init() };
+        let worker = Arc::new(WorkerClient::spawn()?);
 
-        let c_path = CString::new(options.db_path.clone()).unwrap();
-        let c_mode = CString::new(options.mode.as_str()).unwrap();
-
-        let c_options = neug_db_options_t {
-            db_path: c_path.as_ptr(),
-            mode: c_mode.as_ptr(),
+        let res = worker.send_request(RequestPayload::OpenDb {
+            path: options.db_path.clone(),
+            mode: options.mode.as_str().to_string(),
             max_thread_num: options.max_thread_num,
             checkpoint_on_close: options.checkpoint_on_close,
-        };
+        })?;
 
-        let db_ptr = unsafe { neug_db_open(&c_options) };
-
-        if db_ptr.is_null() {
-            let error_msg = unsafe {
-                let err_ptr = neug_get_last_error();
-                if err_ptr.is_null() {
-                    "Unknown error".to_string()
-                } else {
-                    CStr::from_ptr(err_ptr).to_string_lossy().into_owned()
-                }
-            };
-            return Err(Error::InitializationFailed(error_msg));
+        match res {
+            ResponsePayload::OkDb { db_id } => Ok(Self {
+                db_id,
+                worker,
+                options,
+            }),
+            ResponsePayload::Error(msg) => Err(Error::InitializationFailed(msg)),
+            _ => Err(Error::InitializationFailed("Unexpected response".into())),
         }
-
-        Ok(Self {
-            inner: db_ptr,
-            options,
-        })
     }
 
     /// Get the mode of the database.
@@ -102,32 +85,24 @@ impl Database {
 
     /// Creates a new connection to the database.
     pub fn connect(&self) -> Result<Connection> {
-        if self.inner.is_null() {
-            return Err(Error::DatabaseClosed);
+        let res = self.worker.send_request(RequestPayload::Connect {
+            db_id: self.db_id,
+        })?;
+
+        match res {
+            ResponsePayload::OkConn { conn_id } => Ok(Connection::new(conn_id, self.worker.clone())),
+            ResponsePayload::Error(msg) => Err(Error::InitializationFailed(msg)),
+            _ => Err(Error::InitializationFailed("Unexpected response".into())),
         }
-
-        let conn_ptr = unsafe { neug_db_connect(self.inner) };
-
-        if conn_ptr.is_null() {
-            let error_msg = unsafe {
-                let err_ptr = neug_get_last_error();
-                if err_ptr.is_null() {
-                    "Failed to create connection".to_string()
-                } else {
-                    CStr::from_ptr(err_ptr).to_string_lossy().into_owned()
-                }
-            };
-            return Err(Error::InitializationFailed(error_msg));
-        }
-
-        Ok(Connection::new(conn_ptr, self.inner))
     }
 
     /// Close the database.
     pub fn close(&mut self) {
-        if !self.inner.is_null() {
-            unsafe { neug_db_close(self.inner) };
-            self.inner = std::ptr::null_mut();
+        if self.db_id != 0 {
+            let _ = self.worker.send_request(RequestPayload::CloseDb {
+                db_id: self.db_id,
+            });
+            self.db_id = 0;
         }
     }
 }
