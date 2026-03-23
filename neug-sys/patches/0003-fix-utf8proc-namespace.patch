@@ -1,0 +1,13 @@
+diff --git a/include/neug/compiler/function/list/functions/list_len_function.h b/include/neug/compiler/function/list/functions/list_len_function.h
+index 6e43033f..49669a39 100644
+--- a/include/neug/compiler/function/list/functions/list_len_function.h
++++ b/include/neug/compiler/function/list/functions/list_len_function.h
+@@ -47,7 +47,7 @@ inline void ListLen::operation(common::neug_string_t& input, int64_t& result) {
+       int64_t length = 0;
+       // Use grapheme iterator to identify bytes of utf8 char and increment once
+       // for each char.
+-      utf8proc::utf8proc_grapheme_callback(
++      utf8proc_grapheme_callback(
+           inputString.c_str(), totalByteLength,
+           [&](size_t /*start*/, size_t /*end*/) {
+             length++;
