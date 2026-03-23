@@ -3,8 +3,8 @@ use bincode::{deserialize_from, serialize_into};
 use neug_protocol::{Request, RequestPayload, Response, ResponsePayload};
 use std::io::{BufReader, BufWriter, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 struct WorkerState {
     child: Child,
@@ -19,13 +19,33 @@ pub(crate) struct WorkerClient {
 
 impl WorkerClient {
     pub fn spawn() -> Result<Self> {
-        let mut child = Command::new("neug-worker")
+        // In development, the worker binary is usually located in the same directory as the executable (e.g., target/debug/)
+        // or one level up if we are running an example or test (e.g., target/debug/examples/).
+        let mut command = Command::new("neug-worker");
+
+        if let Ok(mut exe_path) = std::env::current_exe() {
+            exe_path.pop(); // remove current executable name
+
+            let mut candidate = exe_path.join("neug-worker");
+            if candidate.exists() {
+                command = Command::new(candidate);
+            } else {
+                // Check if we are in deps/, examples/, etc. and look one level up
+                exe_path.pop();
+                candidate = exe_path.join("neug-worker");
+                if candidate.exists() {
+                    command = Command::new(candidate);
+                }
+            }
+        }
+
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()
             .map_err(|e| {
                 Error::InitializationFailed(format!(
-                    "Failed to spawn neug-worker. Make sure it is installed and in PATH: {}",
+                    "Failed to spawn neug-worker. Make sure it is compiled and in PATH: {}",
                     e
                 ))
             })?;
