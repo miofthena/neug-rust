@@ -8,16 +8,11 @@
      endif ()
  endif ()
  # Only add -fopenmp if not using clang
-@@ -963,6 +962,13 @@
+@@ -963,12 +962,7 @@
  install_neug_target(${GLOG_LIBRARIES})
  install_neug_target(${GFLAGS_LIBRARIES})
  
 +install_neug_target(yaml-cpp)
-+install_neug_target(re2)
-+install_neug_target(utf8proc)
-+install_neug_target(antlr4_runtime)
-+install_neug_target(antlr4_cypher)
-+install_neug_target(fast_float)
 +
  if(BUILD_EXTENSIONS)
      message(STATUS "Building extensions: ${BUILD_EXTENSIONS}")
