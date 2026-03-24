@@ -152,7 +152,9 @@ fn main() {
     config
         .define("BUILD_TESTS", "OFF")
         .define("BUILD_EXAMPLES", "OFF")
-        .define("BUILD_HTTP_SERVER", "OFF");
+        .define("BUILD_HTTP_SERVER", "OFF")
+        .define("ENABLE_WERROR", "OFF")
+        .define("CMAKE_POSITION_INDEPENDENT_CODE", "ON");
 
     // Automatically use sccache or ccache if available to speed up C++ builds
     if Command::new("sccache").arg("--version").output().is_ok() {

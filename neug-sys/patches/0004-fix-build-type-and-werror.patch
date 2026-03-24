@@ -1,0 +1,32 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -149,7 +149,6 @@
+         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lopen-pal")
+     else ()
+         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-rpath,$ORIGIN")
+-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+     endif ()
+ endif ()
+ # Only add -fopenmp if not using clang
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -26,7 +26,7 @@
+ add_subdirectory(execution)
+ 
+ message(STATUS "Compiler libraries: ${COMPILER_LIBRARIES}")
+-add_library(neug SHARED ${ALL_OBJECT_FILES})
++add_library(neug STATIC ${ALL_OBJECT_FILES})
+ if (ENABLE_GCOV)
+     target_link_options(neug PRIVATE --coverage)
+ endif()
+--- a/include/neug/utils/property/column.h
++++ b/include/neug/utils/property/column.h
+@@ -184,7 +184,7 @@
+     }
+   }
+ 
+-  void set_any(size_t index, const Property& value, bool insert_safe) override {
++  void set_any(size_t index, const Property& value, bool /*insert_safe*/) override {
+     // allow resize is ignored for fixed-length types
+     set_value(index, PropUtils<T>::to_typed(value));
+   }
