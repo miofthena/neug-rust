@@ -173,7 +173,15 @@ fn main() {
     // Link against the built `neug` library
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
-    println!("cargo:rustc-link-lib=dylib=neug");
+    println!("cargo:rustc-link-lib=static=neug");
+
+    // Link C++ standard library
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os == "macos" {
+        println!("cargo:rustc-link-lib=dylib=c++");
+    } else {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+    }
 
     // Compile the C API wrapper
     let mut build = cc::Build::new();
