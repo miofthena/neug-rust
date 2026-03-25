@@ -176,13 +176,6 @@ fn main() {
 
     let dst = config.build();
 
-    // Link against the built libraries in the correct order:
-    // IMPORTANT: Dependencies must come AFTER the libraries that use them.
-    // 1. neug_c_api (wrapper, uses neug)
-    // 2. neug (core engine, uses arrow, glog, etc.)
-    // 3. dependencies (glog, arrow, protobuf, absl, etc.)
-    // 4. system libs (ssl, crypto, stdc++)
-
     // Compile and link the C API wrapper first
     let mut build = cc::Build::new();
     build
@@ -203,11 +196,21 @@ fn main() {
 
     build.compile("neug_c_api");
 
-    // Link Search Paths
+    // Link against the built libraries in the correct order:
+    // IMPORTANT: Dependencies must come AFTER the libraries that use them.
+    // 1. neug_c_api (wrapper, uses neug)
+    // 2. neug (core engine, uses arrow, glog, etc.)
+    // 3. dependencies (glog, arrow, protobuf, absl, etc.)
+    // 4. system libs (ssl, crypto, stdc++, pthread, dl)
+
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
 
-    // Link Core Engine
+    // Tell cargo where to find libraries
+    println!("cargo:rustc-link-search=native={}", out_dir.join("build/lib").display());
+
+    // Core libraries
+    println!("cargo:rustc-link-lib=static=neug_c_api");
     println!("cargo:rustc-link-lib=static=neug");
 
     // Static dependencies
@@ -221,33 +224,37 @@ fn main() {
     println!("cargo:rustc-link-lib=static=utf8proc");
     println!("cargo:rustc-link-lib=static=antlr4_runtime");
     println!("cargo:rustc-link-lib=static=antlr4_cypher");
+    println!("cargo:rustc-link-lib=static=lz4");
 
-    // Abseil libraries (required by Protobuf)
-    println!("cargo:rustc-link-lib=static=absl_log_internal_check_op");
-    println!("cargo:rustc-link-lib=static=absl_log_internal_message");
-    println!("cargo:rustc-link-lib=static=absl_log_internal_nullguard");
-    println!("cargo:rustc-link-lib=static=absl_log_internal_proto");
-    println!("cargo:rustc-link-lib=static=absl_log_severity");
-    println!("cargo:rustc-link-lib=static=absl_status");
-    println!("cargo:rustc-link-lib=static=absl_statusor");
-    println!("cargo:rustc-link-lib=static=absl_str_format_internal");
-    println!("cargo:rustc-link-lib=static=absl_synchronization");
-    println!("cargo:rustc-link-lib=static=absl_time");
-    println!("cargo:rustc-link-lib=static=absl_time_zone");
-    println!("cargo:rustc-link-lib=static=absl_int128");
-    println!("cargo:rustc-link-lib=static=absl_throw_delegate");
-    println!("cargo:rustc-link-lib=static=absl_raw_logging_internal");
-    println!("cargo:rustc-link-lib=static=absl_base");
-    println!("cargo:rustc-link-lib=static=absl_spinlock_wait");
-    println!("cargo:rustc-link-lib=static=absl_malloc_internal");
-    println!("cargo:rustc-link-lib=static=absl_hashtablez_sampler");
-    println!("cargo:rustc-link-lib=static=absl_raw_hash_set");
-    println!("cargo:rustc-link-lib=static=absl_city");
-    println!("cargo:rustc-link-lib=static=absl_low_level_hash");
+    // Abseil libraries (expanded set for robustness)
+    let absl_libs = [
+        "absl_log_internal_check_op", "absl_log_internal_message", "absl_log_internal_nullguard",
+        "absl_log_internal_proto", "absl_log_severity", "absl_status", "absl_statusor",
+        "absl_str_format_internal", "absl_synchronization", "absl_time", "absl_time_zone",
+        "absl_int128", "absl_throw_delegate", "absl_raw_logging_internal", "absl_base",
+        "absl_spinlock_wait", "absl_malloc_internal", "absl_hashtablez_sampler", "absl_raw_hash_set",
+        "absl_city", "absl_low_level_hash", "absl_cord", "absl_cord_internal", "absl_cordz_info",
+        "absl_cordz_handle", "absl_strings", "absl_strings_internal", "absl_strerror", "absl_graphcycles_internal",
+    ];
+    for lib in absl_libs {
+        println!("cargo:rustc-link-lib=static={}", lib);
+    }
 
     // Dynamic system dependencies
     println!("cargo:rustc-link-lib=dylib=ssl");
     println!("cargo:rustc-link-lib=dylib=crypto");
+
+    // Link C++ standard library and system libs
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os == "macos" {
+        println!("cargo:rustc-link-lib=dylib=c++");
+    } else {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+        println!("cargo:rustc-link-lib=dylib=pthread");
+        println!("cargo:rustc-link-lib=dylib=dl");
+        println!("cargo:rustc-link-lib=dylib=rt");
+        println!("cargo:rustc-link-lib=dylib=m");
+    }
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=c_api.h");
