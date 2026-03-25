@@ -156,6 +156,8 @@ fn main() {
         .define("ENABLE_WERROR", "OFF")
         .define("CMAKE_POSITION_INDEPENDENT_CODE", "ON")
         .cxxflag("-Wno-unused-parameter")
+        .cxxflag("-Wno-deprecated-copy")
+        .cxxflag("-Wno-ignored-qualifiers")
         .cxxflag("-Wno-dev");
 
     // Automatically use sccache or ccache if available to speed up C++ builds
@@ -172,13 +174,12 @@ fn main() {
         unsafe { env::set_var("CMAKE_BUILD_PARALLEL_LEVEL", jobs) };
     }
 
-    build.compile("neug_c_api");
+    let dst = config.build();
 
     // Link against the built libraries in the correct order:
-    // 1. neug_c_api (already handled by cc::Build)
-    // 2. neug (the core engine)
-    // 3. neug's dependencies (arrow, glog, gflags, etc.)
-    // 4. system libs (ssl, crypto, stdc++)
+    // 1. neug (the core engine)
+    // 2. neug's dependencies (arrow, glog, gflags, etc.)
+    // 3. system libs (ssl, crypto, stdc++)
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
@@ -209,7 +210,6 @@ fn main() {
     } else {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
-
 
     // Compile the C API wrapper
     let mut build = cc::Build::new();
