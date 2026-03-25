@@ -179,6 +179,10 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
     println!("cargo:rustc-link-lib=static=neug");
 
+    // We also need to link against neug's dependencies because we are linking statically
+    println!("cargo:rustc-link-lib=dylib=ssl");
+    println!("cargo:rustc-link-lib=dylib=crypto");
+
     // Link C++ standard library
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     if target_os == "macos" {
@@ -194,6 +198,7 @@ fn main() {
         .std("c++20")
         .file("c_api.cpp")
         .flag("-Wno-unused-parameter")
+        .flag("-Wno-deprecated-copy")
         .include(format!("{}/include", neug_dir.display()))
         .include(format!("{}/include", dst.display()));
 
@@ -204,6 +209,9 @@ fn main() {
     }
 
     build.compile("neug_c_api");
+
+    // Tell cargo to link neug_c_api
+    println!("cargo:rustc-link-lib=static=neug_c_api");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=c_api.h");
