@@ -154,7 +154,9 @@ fn main() {
         .define("BUILD_EXAMPLES", "OFF")
         .define("BUILD_HTTP_SERVER", "OFF")
         .define("ENABLE_WERROR", "OFF")
-        .define("CMAKE_POSITION_INDEPENDENT_CODE", "ON");
+        .define("CMAKE_POSITION_INDEPENDENT_CODE", "ON")
+        .cxxflag("-Wno-unused-parameter")
+        .cxxflag("-Wno-dev");
 
     // Automatically use sccache or ccache if available to speed up C++ builds
     if Command::new("sccache").arg("--version").output().is_ok() {
@@ -191,6 +193,7 @@ fn main() {
         .cpp(true)
         .std("c++20")
         .file("c_api.cpp")
+        .flag("-Wno-unused-parameter")
         .include(format!("{}/include", neug_dir.display()))
         .include(format!("{}/include", dst.display()));
 
