@@ -26,7 +26,7 @@
  
 -set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC -Wno-psabi")
 -set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC -Wno-psabi -Wno-unused-parameter -Wno-deprecated-copy -Wno-error")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC -Wno-psabi -Wno-unused-parameter -Wno-deprecated-copy -Wno-ignored-qualifiers -Wno-error")
 +set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wno-unused-parameter -Wno-error")
  check_cxx_compiler_flag("-std=c++20" COMPILER_SUPPORTS_CXX20)
  if (NOT COMPILER_SUPPORTS_CXX20)
@@ -62,3 +62,14 @@
      // allow resize is ignored for fixed-length types
      set_value(index, PropUtils<T>::to_typed(value));
    }
+--- a/include/neug/storages/graph/vertex_timestamp.h
++++ b/include/neug/storages/graph/vertex_timestamp.h
+@@ -159,7 +159,7 @@
+ 
+   const ts_t MinTs() const { return 0; }
+ 
+-  const vid_t InitVertexNum() const { return init_vertex_num_; }
++  vid_t InitVertexNum() const { return init_vertex_num_; }
+ 
+   void UpdateInitVertexNum(vid_t num) { init_vertex_num_ = num; }
+ 

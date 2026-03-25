@@ -179,7 +179,17 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
     println!("cargo:rustc-link-lib=static=neug");
 
-    // We also need to link against neug's dependencies because we are linking statically
+    // Static dependencies from the build directory
+    println!("cargo:rustc-link-lib=static=glog");
+    println!("cargo:rustc-link-lib=static=gflags");
+    println!("cargo:rustc-link-lib=static=yaml-cpp");
+    println!("cargo:rustc-link-lib=static=arrow_static");
+    println!("cargo:rustc-link-lib=static=re2");
+    println!("cargo:rustc-link-lib=static=utf8proc");
+    println!("cargo:rustc-link-lib=static=antlr4_runtime");
+    println!("cargo:rustc-link-lib=static=antlr4_cypher");
+
+    // Dynamic system dependencies
     println!("cargo:rustc-link-lib=dylib=ssl");
     println!("cargo:rustc-link-lib=dylib=crypto");
 
@@ -199,6 +209,7 @@ fn main() {
         .file("c_api.cpp")
         .flag("-Wno-unused-parameter")
         .flag("-Wno-deprecated-copy")
+        .flag("-Wno-ignored-qualifiers")
         .include(format!("{}/include", neug_dir.display()))
         .include(format!("{}/include", dst.display()));
 
@@ -209,9 +220,6 @@ fn main() {
     }
 
     build.compile("neug_c_api");
-
-    // Tell cargo to link neug_c_api
-    println!("cargo:rustc-link-lib=static=neug_c_api");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=c_api.h");
