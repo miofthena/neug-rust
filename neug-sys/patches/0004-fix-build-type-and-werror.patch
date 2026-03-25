@@ -31,11 +31,13 @@
  check_cxx_compiler_flag("-std=c++20" COMPILER_SUPPORTS_CXX20)
  if (NOT COMPILER_SUPPORTS_CXX20)
      check_cxx_compiler_flag("-std=c++2a" COMPILER_SUPPORTS_CXX2A)
-@@ -963,6 +959,8 @@
+@@ -963,6 +959,10 @@
  install_neug_target(${GLOG_LIBRARIES})
  install_neug_target(${GFLAGS_LIBRARIES})
  
 +install_neug_target(yaml-cpp)
++install_neug_target(libprotobuf)
++install_neug_target(libprotobuf-lite)
 +
  if(BUILD_EXTENSIONS)
      message(STATUS "Building extensions: ${BUILD_EXTENSIONS}")
@@ -64,9 +66,12 @@
    }
 --- a/include/neug/storages/graph/vertex_timestamp.h
 +++ b/include/neug/storages/graph/vertex_timestamp.h
-@@ -159,7 +159,7 @@
+@@ -157,9 +157,9 @@
  
-   const ts_t MinTs() const { return 0; }
+   void UpdateMinTs(ts_t ts) { min_ts_ = ts; }
+ 
+-  const ts_t MinTs() const { return 0; }
++  ts_t MinTs() const { return 0; }
  
 -  const vid_t InitVertexNum() const { return init_vertex_num_; }
 +  vid_t InitVertexNum() const { return init_vertex_num_; }

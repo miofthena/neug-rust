@@ -172,11 +172,18 @@ fn main() {
         unsafe { env::set_var("CMAKE_BUILD_PARALLEL_LEVEL", jobs) };
     }
 
-    let dst = config.build();
+    build.compile("neug_c_api");
 
-    // Link against the built `neug` library
+    // Link against the built libraries in the correct order:
+    // 1. neug_c_api (already handled by cc::Build)
+    // 2. neug (the core engine)
+    // 3. neug's dependencies (arrow, glog, gflags, etc.)
+    // 4. system libs (ssl, crypto, stdc++)
+
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
+
+    // Core engine
     println!("cargo:rustc-link-lib=static=neug");
 
     // Static dependencies from the build directory
@@ -184,6 +191,8 @@ fn main() {
     println!("cargo:rustc-link-lib=static=gflags");
     println!("cargo:rustc-link-lib=static=yaml-cpp");
     println!("cargo:rustc-link-lib=static=arrow_static");
+    println!("cargo:rustc-link-lib=static=protobuf");
+    println!("cargo:rustc-link-lib=static=protobuf-lite");
     println!("cargo:rustc-link-lib=static=re2");
     println!("cargo:rustc-link-lib=static=utf8proc");
     println!("cargo:rustc-link-lib=static=antlr4_runtime");
@@ -200,6 +209,7 @@ fn main() {
     } else {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
+
 
     // Compile the C API wrapper
     let mut build = cc::Build::new();
