@@ -177,41 +177,13 @@ fn main() {
     let dst = config.build();
 
     // Link against the built libraries in the correct order:
-    // 1. neug (the core engine)
-    // 2. neug's dependencies (arrow, glog, gflags, etc.)
-    // 3. system libs (ssl, crypto, stdc++)
+    // IMPORTANT: Dependencies must come AFTER the libraries that use them.
+    // 1. neug_c_api (wrapper, uses neug)
+    // 2. neug (core engine, uses arrow, glog, etc.)
+    // 3. dependencies (glog, arrow, protobuf, absl, etc.)
+    // 4. system libs (ssl, crypto, stdc++)
 
-    println!("cargo:rustc-link-search=native={}/lib", dst.display());
-    println!("cargo:rustc-link-search=native={}/lib64", dst.display());
-
-    // Core engine
-    println!("cargo:rustc-link-lib=static=neug");
-
-    // Static dependencies from the build directory
-    println!("cargo:rustc-link-lib=static=glog");
-    println!("cargo:rustc-link-lib=static=gflags");
-    println!("cargo:rustc-link-lib=static=yaml-cpp");
-    println!("cargo:rustc-link-lib=static=arrow_static");
-    println!("cargo:rustc-link-lib=static=protobuf");
-    println!("cargo:rustc-link-lib=static=protobuf-lite");
-    println!("cargo:rustc-link-lib=static=re2");
-    println!("cargo:rustc-link-lib=static=utf8proc");
-    println!("cargo:rustc-link-lib=static=antlr4_runtime");
-    println!("cargo:rustc-link-lib=static=antlr4_cypher");
-
-    // Dynamic system dependencies
-    println!("cargo:rustc-link-lib=dylib=ssl");
-    println!("cargo:rustc-link-lib=dylib=crypto");
-
-    // Link C++ standard library
-    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    if target_os == "macos" {
-        println!("cargo:rustc-link-lib=dylib=c++");
-    } else {
-        println!("cargo:rustc-link-lib=dylib=stdc++");
-    }
-
-    // Compile the C API wrapper
+    // Compile and link the C API wrapper first
     let mut build = cc::Build::new();
     build
         .cpp(true)
@@ -230,6 +202,52 @@ fn main() {
     }
 
     build.compile("neug_c_api");
+
+    // Link Search Paths
+    println!("cargo:rustc-link-search=native={}/lib", dst.display());
+    println!("cargo:rustc-link-search=native={}/lib64", dst.display());
+
+    // Link Core Engine
+    println!("cargo:rustc-link-lib=static=neug");
+
+    // Static dependencies
+    println!("cargo:rustc-link-lib=static=glog");
+    println!("cargo:rustc-link-lib=static=gflags");
+    println!("cargo:rustc-link-lib=static=yaml-cpp");
+    println!("cargo:rustc-link-lib=static=arrow_static");
+    println!("cargo:rustc-link-lib=static=protobuf");
+    println!("cargo:rustc-link-lib=static=protobuf-lite");
+    println!("cargo:rustc-link-lib=static=re2");
+    println!("cargo:rustc-link-lib=static=utf8proc");
+    println!("cargo:rustc-link-lib=static=antlr4_runtime");
+    println!("cargo:rustc-link-lib=static=antlr4_cypher");
+
+    // Abseil libraries (required by Protobuf)
+    println!("cargo:rustc-link-lib=static=absl_log_internal_check_op");
+    println!("cargo:rustc-link-lib=static=absl_log_internal_message");
+    println!("cargo:rustc-link-lib=static=absl_log_internal_nullguard");
+    println!("cargo:rustc-link-lib=static=absl_log_internal_proto");
+    println!("cargo:rustc-link-lib=static=absl_log_severity");
+    println!("cargo:rustc-link-lib=static=absl_status");
+    println!("cargo:rustc-link-lib=static=absl_statusor");
+    println!("cargo:rustc-link-lib=static=absl_str_format_internal");
+    println!("cargo:rustc-link-lib=static=absl_synchronization");
+    println!("cargo:rustc-link-lib=static=absl_time");
+    println!("cargo:rustc-link-lib=static=absl_time_zone");
+    println!("cargo:rustc-link-lib=static=absl_int128");
+    println!("cargo:rustc-link-lib=static=absl_throw_delegate");
+    println!("cargo:rustc-link-lib=static=absl_raw_logging_internal");
+    println!("cargo:rustc-link-lib=static=absl_base");
+    println!("cargo:rustc-link-lib=static=absl_spinlock_wait");
+    println!("cargo:rustc-link-lib=static=absl_malloc_internal");
+    println!("cargo:rustc-link-lib=static=absl_hashtablez_sampler");
+    println!("cargo:rustc-link-lib=static=absl_raw_hash_set");
+    println!("cargo:rustc-link-lib=static=absl_city");
+    println!("cargo:rustc-link-lib=static=absl_low_level_hash");
+
+    // Dynamic system dependencies
+    println!("cargo:rustc-link-lib=dylib=ssl");
+    println!("cargo:rustc-link-lib=dylib=crypto");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=c_api.h");

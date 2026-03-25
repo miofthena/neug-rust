@@ -66,12 +66,9 @@
    }
 --- a/include/neug/storages/graph/vertex_timestamp.h
 +++ b/include/neug/storages/graph/vertex_timestamp.h
-@@ -157,9 +157,9 @@
+@@ -159,7 +159,7 @@
  
-   void UpdateMinTs(ts_t ts) { min_ts_ = ts; }
- 
--  const ts_t MinTs() const { return 0; }
-+  ts_t MinTs() const { return 0; }
+   const ts_t MinTs() const { return 0; }
  
 -  const vid_t InitVertexNum() const { return init_vertex_num_; }
 +  vid_t InitVertexNum() const { return init_vertex_num_; }
