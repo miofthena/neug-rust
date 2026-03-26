@@ -39,7 +39,7 @@ fn main() {
                 .unwrap()
                 .filter_map(|e| e.ok())
                 .map(|e| e.path())
-                .filter(|p| p.extension().map_or(false, |ext| ext == "patch"))
+                .filter(|p| p.extension().is_some_and(|ext| ext == "patch"))
                 .collect();
             patches.sort();
 
@@ -114,7 +114,7 @@ fn main() {
                     .unwrap()
                     .filter_map(|e| e.ok())
                     .map(|e| e.path())
-                    .filter(|p| p.extension().map_or(false, |ext| ext == "patch"))
+                    .filter(|p| p.extension().is_some_and(|ext| ext == "patch"))
                     .collect();
                 patches.sort();
 
@@ -207,7 +207,10 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
 
     // Tell cargo where to find libraries
-    println!("cargo:rustc-link-search=native={}", out_dir.join("build/lib").display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        out_dir.join("build/lib").display()
+    );
 
     // Core libraries
     println!("cargo:rustc-link-lib=static=neug_c_api");
@@ -228,13 +231,35 @@ fn main() {
 
     // Abseil libraries (expanded set for robustness)
     let absl_libs = [
-        "absl_log_internal_check_op", "absl_log_internal_message", "absl_log_internal_nullguard",
-        "absl_log_internal_proto", "absl_log_severity", "absl_status", "absl_statusor",
-        "absl_str_format_internal", "absl_synchronization", "absl_time", "absl_time_zone",
-        "absl_int128", "absl_throw_delegate", "absl_raw_logging_internal", "absl_base",
-        "absl_spinlock_wait", "absl_malloc_internal", "absl_hashtablez_sampler", "absl_raw_hash_set",
-        "absl_city", "absl_low_level_hash", "absl_cord", "absl_cord_internal", "absl_cordz_info",
-        "absl_cordz_handle", "absl_strings", "absl_strings_internal", "absl_strerror", "absl_graphcycles_internal",
+        "absl_log_internal_check_op",
+        "absl_log_internal_message",
+        "absl_log_internal_nullguard",
+        "absl_log_internal_proto",
+        "absl_log_severity",
+        "absl_status",
+        "absl_statusor",
+        "absl_str_format_internal",
+        "absl_synchronization",
+        "absl_time",
+        "absl_time_zone",
+        "absl_int128",
+        "absl_throw_delegate",
+        "absl_raw_logging_internal",
+        "absl_base",
+        "absl_spinlock_wait",
+        "absl_malloc_internal",
+        "absl_hashtablez_sampler",
+        "absl_raw_hash_set",
+        "absl_city",
+        "absl_low_level_hash",
+        "absl_cord",
+        "absl_cord_internal",
+        "absl_cordz_info",
+        "absl_cordz_handle",
+        "absl_strings",
+        "absl_strings_internal",
+        "absl_strerror",
+        "absl_graphcycles_internal",
     ];
     for lib in absl_libs {
         println!("cargo:rustc-link-lib=static={}", lib);
