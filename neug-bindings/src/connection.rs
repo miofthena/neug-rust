@@ -24,16 +24,17 @@ impl AccessMode {
     }
 }
 
+use std::fmt;
+
 /// Represents the result of a query.
 #[derive(Debug)]
 pub struct QueryResult {
     result_string: String,
 }
 
-impl QueryResult {
-    /// Returns the result as a string
-    pub fn to_string(&self) -> String {
-        self.result_string.clone()
+impl fmt::Display for QueryResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.result_string)
     }
 }
 

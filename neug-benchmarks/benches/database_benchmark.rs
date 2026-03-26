@@ -45,7 +45,7 @@ fn bench_graph_operations(c: &mut Criterion) {
     conn.execute("CREATE REL TABLE FOLLOWS(FROM Person TO Person, weight DOUBLE);")
         .unwrap();
 
-    let mut id = std::sync::atomic::AtomicU64::new(0);
+    let id = std::sync::atomic::AtomicU64::new(0);
     c.bench_function("graph_insert_node", |b| {
         b.iter_batched(
             || {

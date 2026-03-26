@@ -26,15 +26,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("4. Querying Data (Read)...");
     let res = conn.execute("MATCH (u:user) RETURN u.name AS Name, u.age AS Age;")?;
-    println!(
-        "   > Queried all users successfully. Results:\n{}",
-        res.to_string()
-    );
+    println!("   > Queried all users successfully. Results:\n{}", res);
 
     let followers = conn.execute("MATCH (a)-[:follows]->(b) RETURN a.name, b.name;")?;
     println!(
         "   > Queried followers graph successfully. Results:\n{}",
-        followers.to_string()
+        followers
     );
 
     println!("5. Updating Properties (Update)...");

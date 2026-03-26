@@ -9,11 +9,14 @@ This repository provides Rust bindings for the NeuG C++ graph database engine. I
 - **MUST** keep `README.md` and documentation synchronized with the actual implementation.
 
 ## Pre-Commit Quality Standards (MANDATORY)
-- **CRITICAL:** Before ANY commit, you MUST run the following and ensure they pass:
-  1. `cargo fmt` — to ensure consistent code style.
-  2. `cargo clippy` — to ensure idiomatic code and no warnings.
-  3. `cargo check` (or a full build if possible) — to verify that your changes didn't break the build.
-- **NEVER** push code that fails `cargo fmt --check`.
+- **CRITICAL:** Before ANY commit, you MUST run `./scripts/verify.sh` and ensure it passes completely.
+- This script performs:
+  1. `cargo fmt --all -- --check`
+  2. `cargo clippy --workspace --all-targets -- -D warnings`
+  3. `cargo build`
+  4. `cargo test`
+  5. Runs all examples (`simple_example`, `parallel_query`, `crud_operations`)
+- **NEVER** push code if any of these steps fail.
 
 ## Repository Hygiene
 - **NEVER** commit local build artifacts: `a.out`, `bench_results.txt`, `.DS_Store`, `test.rs`.
