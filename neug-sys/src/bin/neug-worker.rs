@@ -52,10 +52,10 @@ fn main() {
         let req: Request = match deserialize_from(&mut reader) {
             Ok(req) => req,
             Err(e) => {
-                if let bincode::ErrorKind::Io(io_err) = e.as_ref() {
-                    if io_err.kind() == io::ErrorKind::UnexpectedEof {
-                        break;
-                    }
+                if let bincode::ErrorKind::Io(io_err) = e.as_ref()
+                    && io_err.kind() == io::ErrorKind::UnexpectedEof
+                {
+                    break;
                 }
                 eprintln!("neug-worker: Failed to read request: {:?}", e);
                 break;
