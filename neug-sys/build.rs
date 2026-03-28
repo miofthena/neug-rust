@@ -218,7 +218,7 @@ fn main() {
 
     // Static dependencies
     println!("cargo:rustc-link-lib=static=glog");
-    println!("cargo:rustc-link-lib=static=gflags");
+    println!("cargo:rustc-link-lib=static=gflags_nothreads");
     println!("cargo:rustc-link-lib=static=yaml-cpp");
     println!("cargo:rustc-link-lib=static=arrow_static");
     println!("cargo:rustc-link-lib=static=protobuf");
