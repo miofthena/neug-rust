@@ -1,6 +1,6 @@
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -141,19 +141,15 @@
+@@ -141,19 +141,16 @@
          add_compile_options(-Werror)
      elseif (MSVC)
          add_compile_options(\WX)
