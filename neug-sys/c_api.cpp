@@ -108,7 +108,7 @@ neug_result_t neug_conn_execute(neug_conn_t conn, const char* query, const char*
     try {
         auto* conn_ptr = static_cast<std::shared_ptr<neug::Connection>*>(conn);
         std::string query_str(query);
-        std::string mode_str = access_mode ? access_mode : "update";
+        std::string mode_str = access_mode ? access_mode : "";
         
         auto res = (*conn_ptr)->Query(query_str, mode_str);
         if (res.has_value()) {

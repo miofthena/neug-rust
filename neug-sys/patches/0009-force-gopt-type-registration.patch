@@ -1,0 +1,38 @@
+diff --git a/include/neug/compiler/gopt/g_type_utils.h b/include/neug/compiler/gopt/g_type_utils.h
+index 2d6bb6b..fbcb900 100644
+--- a/include/neug/compiler/gopt/g_type_utils.h
++++ b/include/neug/compiler/gopt/g_type_utils.h
+@@ -32,6 +32,8 @@ namespace common {
+ class LogicalType;
+ class Serializer;
+ }  // namespace common
++
++void ensure_yaml_type_registry_loaded();
+ const static uint32_t VARCHAR_DEFAULT_LENGTH = 65536;
+ 
+ class VarcharExtraInfo : public neug::common::ExtraTypeInfo {
+@@ -58,6 +60,7 @@ class VarcharExtraInfo : public neug::common::ExtraTypeInfo {
+ class GTypeUtils {
+  public:
+   static inline neug::common::LogicalType createLogicalType(YAML::Node& node) {
++    ensure_yaml_type_registry_loaded();
+     if (common::LogicalTypeRegistry::containsTypeYaml(node)) {
+       auto typeID = common::LogicalTypeRegistry::getTypeID(node);
+       return neug::common::LogicalType(typeID);
+diff --git a/src/compiler/gopt/g_type_registration.cpp b/src/compiler/gopt/g_type_registration.cpp
+index 2047196..95b8647 100644
+--- a/src/compiler/gopt/g_type_registration.cpp
++++ b/src/compiler/gopt/g_type_registration.cpp
+@@ -16,6 +16,12 @@
+ 
+ #include "neug/compiler/gopt/g_macro.h"
+ 
++namespace neug {
++
++void ensure_yaml_type_registry_loaded() {}
++
++}  // namespace neug
++
+ REGISTER_YAML_NODE_TYPE(YAML_NODE_DT_SIGNED_INT64, INT64)
+ REGISTER_YAML_NODE_TYPE(YAML_NODE_DT_UNSIGNED_INT64, UINT64)
+ REGISTER_YAML_NODE_TYPE(YAML_NODE_DT_SIGNED_INT32, INT32)

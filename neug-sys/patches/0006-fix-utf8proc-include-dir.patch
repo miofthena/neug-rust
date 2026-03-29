@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,6 +24,10 @@ configure_file(
+ 
+ # Add the generated header to include directories
+ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
++# Public headers include "utf8proc.h" directly, so the vendored header must
++# win over Homebrew/system installations during quoted-header lookup.
++include_directories(BEFORE
++                    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/utf8proc/include)
+ 
+ project (
+   NeuG

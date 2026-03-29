@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::io::{self, BufReader, BufWriter, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 #[derive(Clone, Copy)]
 struct SyncDb(neug_db_t);
@@ -30,6 +30,8 @@ fn main() {
 
     let dbs: Arc<RwLock<HashMap<u64, SyncDb>>> = Arc::new(RwLock::new(HashMap::new()));
     let conns: Arc<RwLock<HashMap<u64, SyncConn>>> = Arc::new(RwLock::new(HashMap::new()));
+    let conn_locks: Arc<RwLock<HashMap<u64, Arc<Mutex<()>>>>> =
+        Arc::new(RwLock::new(HashMap::new()));
     let conn_to_db: Arc<RwLock<HashMap<u64, u64>>> = Arc::new(RwLock::new(HashMap::new()));
 
     let next_db_id = Arc::new(AtomicU64::new(1));
@@ -65,6 +67,7 @@ fn main() {
         let tx_clone = tx.clone();
         let dbs_clone = dbs.clone();
         let conns_clone = conns.clone();
+        let conn_locks_clone = conn_locks.clone();
         let conn_to_db_clone = conn_to_db.clone();
         let next_db_id_clone = next_db_id.clone();
         let next_conn_id_clone = next_conn_id.clone();
@@ -123,6 +126,10 @@ fn main() {
                                 .write()
                                 .unwrap()
                                 .insert(conn_id, SyncConn(conn_ptr));
+                            conn_locks_clone
+                                .write()
+                                .unwrap()
+                                .insert(conn_id, Arc::new(Mutex::new(())));
                             conn_to_db_clone.write().unwrap().insert(conn_id, db_id);
                             ResponsePayload::OkConn { conn_id }
                         }
@@ -130,12 +137,43 @@ fn main() {
                         ResponsePayload::Error("Invalid db_id".to_string())
                     }
                 }
-                RequestPayload::Execute { conn_id, query } => {
+                RequestPayload::Execute {
+                    conn_id,
+                    query,
+                    access_mode,
+                } => {
                     let conn_ptr = conns_clone.read().unwrap().get(&conn_id).copied();
-                    if let Some(SyncConn(ptr)) = conn_ptr {
+                    let conn_lock = conn_locks_clone.read().unwrap().get(&conn_id).cloned();
+                    if let (Some(SyncConn(ptr)), Some(conn_lock)) = (conn_ptr, conn_lock) {
+                        // NeuG connections are not thread-safe, so requests sharing a
+                        // conn_id must execute in order even though different
+                        // connections can still run concurrently.
+                        let _conn_guard = conn_lock.lock().unwrap();
                         if let Ok(c_query) = CString::new(query) {
+                            let c_access_mode = match access_mode {
+                                Some(mode) => match CString::new(mode) {
+                                    Ok(mode) => Some(mode),
+                                    Err(_) => {
+                                        let response = Response {
+                                            req_id,
+                                            payload: ResponsePayload::Error(
+                                                "Access mode contains null byte".to_string(),
+                                            ),
+                                        };
+                                        let _ = tx_clone.send(response);
+                                        return;
+                                    }
+                                },
+                                None => None,
+                            };
                             let res_ptr = unsafe {
-                                neug_conn_execute(ptr, c_query.as_ptr(), std::ptr::null())
+                                neug_conn_execute(
+                                    ptr,
+                                    c_query.as_ptr(),
+                                    c_access_mode
+                                        .as_ref()
+                                        .map_or(std::ptr::null(), |mode| mode.as_ptr()),
+                                )
                             };
                             if res_ptr.is_null() {
                                 ResponsePayload::Error(
@@ -175,13 +213,17 @@ fn main() {
                     }
                 }
                 RequestPayload::CloseConn { conn_id } => {
-                    let conn_ptr = conns_clone.write().unwrap().remove(&conn_id);
-                    if let Some(SyncConn(c_ptr)) = conn_ptr {
-                        let db_id = conn_to_db_clone.write().unwrap().remove(&conn_id);
-                        if let Some(d_id) = db_id {
-                            let db_ptr = dbs_clone.read().unwrap().get(&d_id).copied();
-                            if let Some(SyncDb(d_ptr)) = db_ptr {
-                                unsafe { neug_conn_close(d_ptr, c_ptr) };
+                    let conn_lock = conn_locks_clone.write().unwrap().remove(&conn_id);
+                    if let Some(conn_lock) = conn_lock {
+                        let _conn_guard = conn_lock.lock().unwrap();
+                        let conn_ptr = conns_clone.write().unwrap().remove(&conn_id);
+                        if let Some(SyncConn(c_ptr)) = conn_ptr {
+                            let db_id = conn_to_db_clone.write().unwrap().remove(&conn_id);
+                            if let Some(d_id) = db_id {
+                                let db_ptr = dbs_clone.read().unwrap().get(&d_id).copied();
+                                if let Some(SyncDb(d_ptr)) = db_ptr {
+                                    unsafe { neug_conn_close(d_ptr, c_ptr) };
+                                }
                             }
                         }
                     }

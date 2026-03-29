@@ -14,6 +14,7 @@ pub enum RequestPayload {
     Execute {
         conn_id: u64,
         query: String,
+        access_mode: Option<String>,
     },
     CloseConn {
         conn_id: u64,

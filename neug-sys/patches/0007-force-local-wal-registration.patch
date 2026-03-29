@@ -1,0 +1,90 @@
+diff --git a/include/neug/transaction/wal/local_wal_parser.h b/include/neug/transaction/wal/local_wal_parser.h
+--- a/include/neug/transaction/wal/local_wal_parser.h
++++ b/include/neug/transaction/wal/local_wal_parser.h
+@@ -30,6 +30,8 @@ class LocalWalParser : public IWalParser {
+     return std::unique_ptr<IWalParser>(new LocalWalParser(wal_dir));
+   }
+ 
++  static void EnsureRegistered();
++
+   explicit LocalWalParser(const std::string& wal_uri);
+   ~LocalWalParser() { close(); }
+ 
+diff --git a/include/neug/transaction/wal/local_wal_writer.h b/include/neug/transaction/wal/local_wal_writer.h
+--- a/include/neug/transaction/wal/local_wal_writer.h
++++ b/include/neug/transaction/wal/local_wal_writer.h
+@@ -26,6 +26,7 @@ class LocalWalWriter : public IWalWriter {
+  public:
+   static std::unique_ptr<IWalWriter> Make(const std::string& wal_uri,
+                                           int thread_id);
++  static void EnsureRegistered();
+ 
+   static constexpr size_t TRUNC_SIZE = 1ul << 30;
+   LocalWalWriter(const std::string& wal_uri, int thread_id)
+diff --git a/src/transaction/wal/local_wal_parser.cc b/src/transaction/wal/local_wal_parser.cc
+--- a/src/transaction/wal/local_wal_parser.cc
++++ b/src/transaction/wal/local_wal_parser.cc
+@@ -31,6 +31,8 @@ LocalWalParser::LocalWalParser(const std::string& wal_uri) {
+   LocalWalParser::open(wal_uri);
+ }
+ 
++void LocalWalParser::EnsureRegistered() { (void)registered_; }
++
+ void LocalWalParser::open(const std::string& wal_uri) {
+   auto wal_dir = get_wal_uri_path(wal_uri);
+   if (!std::filesystem::exists(wal_dir)) {
+diff --git a/src/transaction/wal/local_wal_writer.cc b/src/transaction/wal/local_wal_writer.cc
+--- a/src/transaction/wal/local_wal_writer.cc
++++ b/src/transaction/wal/local_wal_writer.cc
+@@ -33,6 +33,8 @@ std::unique_ptr<IWalWriter> LocalWalWriter::Make(const std::string& wal_uri,
+   return std::unique_ptr<IWalWriter>(new LocalWalWriter(wal_uri, thread_id));
+ }
+ 
++void LocalWalWriter::EnsureRegistered() { (void)registered_; }
++
+ void LocalWalWriter::open() {
+   auto prefix = get_wal_uri_path(wal_uri_);
+   if (!std::filesystem::exists(prefix)) {
+diff --git a/src/transaction/wal/wal.cc b/src/transaction/wal/wal.cc
+--- a/src/transaction/wal/wal.cc
++++ b/src/transaction/wal/wal.cc
+@@ -23,11 +23,22 @@
+ 
+ #include "neug/storages/file_names.h"
+ #include "neug/transaction/wal/dummy_wal_writer.h"
++#include "neug/transaction/wal/local_wal_parser.h"
++#include "neug/transaction/wal/local_wal_writer.h"
+ #include "neug/utils/serialization/in_archive.h"
+ #include "neug/utils/serialization/out_archive.h"
+ 
+ namespace neug {
+ 
++namespace {
++void ensure_local_wal_handlers_registered() {
++  // Static archives can drop translation units whose only effect is the
++  // registration side effect, so we reference them explicitly during init.
++  LocalWalParser::EnsureRegistered();
++  LocalWalWriter::EnsureRegistered();
++}
++}  // namespace
++
+ std::string parse_wal_uri(std::string wal_uri, const std::string& work_dir) {
+   if (wal_uri.empty()) {
+     VLOG(1) << "wal_uri is not set, use default wal_uri";
+@@ -66,7 +77,7 @@ std::string get_wal_uri_path(const std::string& uri) {
+   return path;
+ }
+ 
+-void WalWriterFactory::Init() {}
++void WalWriterFactory::Init() { ensure_local_wal_handlers_registered(); }
+ 
+ void WalWriterFactory::Finalize() {}
+ 
+@@ -110,7 +121,7 @@ WalWriterFactory::getKnownWalWriters() {
+ 
+ ////////////////////////// WalParserFactory //////////////////////////
+ 
+-void WalParserFactory::Init() {}
++void WalParserFactory::Init() { ensure_local_wal_handlers_registered(); }
+ 
+ void WalParserFactory::Finalize() {}

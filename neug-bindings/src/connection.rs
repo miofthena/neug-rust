@@ -73,6 +73,7 @@ impl Connection {
         let res = self.worker.send_request(RequestPayload::Execute {
             conn_id: self.conn_id,
             query: query.to_string(),
+            access_mode: _access_mode.map(|mode| mode.as_str().to_string()),
         })?;
 
         match res {

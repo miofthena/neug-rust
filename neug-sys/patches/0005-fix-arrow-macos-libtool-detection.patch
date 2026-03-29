@@ -1,0 +1,41 @@
+diff --git a/cmake/BuildArrowAsThirdParty.cmake b/cmake/BuildArrowAsThirdParty.cmake
+--- a/cmake/BuildArrowAsThirdParty.cmake
++++ b/cmake/BuildArrowAsThirdParty.cmake
+@@ -177,6 +177,37 @@
+                 message(STATUS "Patched Arrow ThirdpartyToolchain.cmake to propagate CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}")
+             endif()
+         endif()
++        if(APPLE)
++            # Arrow's libtool probe is too strict for current Apple toolchains.
++            # Normalize stderr handling and accept the cctools_ld version string macOS emits.
++            set(_build_utils "${arrow_SOURCE_DIR}/cpp/cmake_modules/BuildUtils.cmake")
++            file(READ "${_build_utils}" _build_utils_content)
++            string(FIND "${_build_utils_content}" "LIBTOOL_V_ERROR" _libtool_check_already_patched)
++            if(_libtool_check_already_patched EQUAL -1)
++                string(REPLACE
++                    [=[execute_process(COMMAND ${LIBTOOL_MACOS} -V
++                    OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
++                    OUTPUT_STRIP_TRAILING_WHITESPACE)]=]
++                    [=[execute_process(COMMAND ${LIBTOOL_MACOS} -V
++                    OUTPUT_VARIABLE LIBTOOL_V_OUTPUT
++                    ERROR_VARIABLE LIBTOOL_V_ERROR
++                    OUTPUT_STRIP_TRAILING_WHITESPACE
++                    ERROR_STRIP_TRAILING_WHITESPACE)
++    if(LIBTOOL_V_ERROR)
++      string(APPEND LIBTOOL_V_OUTPUT "\n${LIBTOOL_V_ERROR}")
++    endif()]=]
++                    _build_utils_content "${_build_utils_content}")
++            endif()
++            string(FIND "${_build_utils_content}" "cctools(_ld)?-([0-9.]+)" _libtool_regex_already_patched)
++            if(_libtool_regex_already_patched EQUAL -1)
++                string(REPLACE
++                    [=[if(NOT "${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools-([0-9.]+).*")]=]
++                    [=[if(NOT "${LIBTOOL_V_OUTPUT}" MATCHES ".*cctools(_ld)?-([0-9.]+).*")]=]
++                    _build_utils_content "${_build_utils_content}")
++            endif()
++            file(WRITE "${_build_utils}" "${_build_utils_content}")
++            message(STATUS "Patched Arrow BuildUtils.cmake to recognize Apple libtool output")
++        endif()
+         add_subdirectory(${arrow_SOURCE_DIR}/cpp ${arrow_BINARY_DIR} EXCLUDE_FROM_ALL)
+     endif()
+ 
