@@ -84,6 +84,18 @@ fn select_static_library_name<'a>(
     })
 }
 
+fn emit_preferred_link(
+    search_paths: &BTreeSet<PathBuf>,
+    static_candidates: &[&str],
+    dynamic_fallback: &str,
+) {
+    if let Some(lib) = select_static_library_name(search_paths, static_candidates) {
+        println!("cargo:rustc-link-lib=static={}", lib);
+    } else {
+        println!("cargo:rustc-link-lib=dylib={}", dynamic_fallback);
+    }
+}
+
 fn rewrite_arrow_download_url(neug_dir: &Path) {
     let arrow_cmake = neug_dir.join("cmake/BuildArrowAsThirdParty.cmake");
     if !arrow_cmake.exists() {
@@ -346,6 +358,8 @@ fn main() {
     let arrow_candidates = ["arrow_static", "arrow"];
     let protobuf_candidates = ["protobufd", "protobuf"];
     let protobuf_lite_candidates = ["protobuf-lited", "protobuf-lite"];
+    let snappy_candidates = ["snappy"];
+    let zstd_candidates = ["zstd", "zstd_static"];
 
     let mut static_libs = vec![
         "neug_c_api",
@@ -361,6 +375,8 @@ fn main() {
     static_libs.extend_from_slice(&arrow_candidates);
     static_libs.extend_from_slice(&protobuf_candidates);
     static_libs.extend_from_slice(&protobuf_lite_candidates);
+    static_libs.extend_from_slice(&snappy_candidates);
+    static_libs.extend_from_slice(&zstd_candidates);
     let mut search_paths = BTreeSet::new();
 
     for path in [
@@ -439,12 +455,14 @@ fn main() {
         println!("cargo:rustc-link-lib=static={}", lib);
     }
 
-    // Dynamic system dependencies
+    // GitHub runners do not ship libsnappy-dev, while Arrow often vendors these archives into
+    // OUT_DIR. Prefer the bundled static copies so Linux CI does not depend on extra apt packages.
+    // Keep OpenSSL and zlib dynamic because they are expected to come from the host toolchain.
     println!("cargo:rustc-link-lib=dylib=ssl");
     println!("cargo:rustc-link-lib=dylib=crypto");
-    println!("cargo:rustc-link-lib=dylib=snappy");
     println!("cargo:rustc-link-lib=dylib=z");
-    println!("cargo:rustc-link-lib=dylib=zstd");
+    emit_preferred_link(&search_paths, &snappy_candidates, "snappy");
+    emit_preferred_link(&search_paths, &zstd_candidates, "zstd");
 
     // Link C++ standard library and system libs
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
