@@ -333,12 +333,15 @@ fn main() {
         "absl_cordz_functions",
         "absl_cordz_info",
         "absl_cordz_handle",
+        "absl_cordz_sample_token",
         "absl_crc32c",
         "absl_crc_cord_state",
         "absl_crc_cpu_detect",
         "absl_crc_internal",
         "absl_debugging_internal",
+        "absl_die_if_null",
         "absl_demangle_internal",
+        "absl_exponential_biased",
         "absl_examine_stack",
         "absl_stacktrace",
         "absl_strings",
@@ -348,6 +351,7 @@ fn main() {
         "absl_symbolize",
         "absl_vlog_config_internal",
         "absl_graphcycles_internal",
+        "absl_periodic_sampler",
     ];
     let gflags_candidates = [
         "gflags_nothreads_debug",
@@ -403,6 +407,9 @@ fn main() {
         collect_library_dirs(&root, &absl_libs, 6, &mut search_paths);
     }
 
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+
     for path in [
         env::var_os("OPENSSL_LIB_DIR").map(PathBuf::from),
         env::var_os("OPENSSL_DIR").map(|dir| PathBuf::from(dir).join("lib")),
@@ -417,6 +424,22 @@ fn main() {
     .flatten()
     {
         add_link_search_path(path, &mut search_paths);
+    }
+
+    if target_os == "linux" {
+        for path in match target_arch.as_str() {
+            "x86_64" => [
+                PathBuf::from("/usr/lib/x86_64-linux-gnu"),
+                PathBuf::from("/lib/x86_64-linux-gnu"),
+            ],
+            "aarch64" => [
+                PathBuf::from("/usr/lib/aarch64-linux-gnu"),
+                PathBuf::from("/lib/aarch64-linux-gnu"),
+            ],
+            _ => [PathBuf::from("/usr/lib64"), PathBuf::from("/lib64")],
+        } {
+            add_link_search_path(path, &mut search_paths);
+        }
     }
 
     let gflags_lib =
@@ -465,7 +488,6 @@ fn main() {
     emit_preferred_link(&search_paths, &zstd_candidates, "zstd");
 
     // Link C++ standard library and system libs
-    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     if target_os == "macos" {
         println!("cargo:rustc-link-lib=dylib=c++");
     } else {
@@ -474,6 +496,11 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=dl");
         println!("cargo:rustc-link-lib=dylib=rt");
         println!("cargo:rustc-link-lib=dylib=m");
+        if target_os == "linux" {
+            // glog records libunwind as a CMake dependency, but Cargo only sees the final static
+            // archive and must restate that system library during the Rust link step.
+            println!("cargo:rustc-link-lib=dylib=unwind");
+        }
     }
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
