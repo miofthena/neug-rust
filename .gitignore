@@ -1,1 +1,8 @@
 /target
+
+# Local release-plz schema cache.
+/.schema/
+
+# Root-level logs generated during manual builds and verification.
+/*.log
+/log*.txt

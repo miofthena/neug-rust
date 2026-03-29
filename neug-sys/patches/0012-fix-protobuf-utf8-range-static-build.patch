@@ -1,0 +1,87 @@
+diff --git a/third_party/protobuf/cmake/libprotobuf-lite.cmake b/third_party/protobuf/cmake/libprotobuf-lite.cmake
+--- a/third_party/protobuf/cmake/libprotobuf-lite.cmake
++++ b/third_party/protobuf/cmake/libprotobuf-lite.cmake
+@@ -2,6 +2,7 @@
+ 
+ include(${protobuf_SOURCE_DIR}/src/file_lists.cmake)
+ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
++set(_protobuf_utf8_dir ${protobuf_SOURCE_DIR}/third_party/utf8_range)
+ 
+ add_library(libprotobuf-lite ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_lite_srcs}
+@@ -27,6 +28,7 @@ target_include_directories(libprotobuf-lite PUBLIC
+   $<BUILD_INTERFACE:${protobuf_SOURCE_DIR}/src>
+   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+ )
++target_include_directories(libprotobuf-lite PRIVATE ${_protobuf_utf8_dir})
+ target_link_libraries(libprotobuf-lite PUBLIC ${protobuf_ABSL_USED_TARGETS})
+ protobuf_configure_target(libprotobuf-lite)
+ protobuf_configure_unity_target(libprotobuf-lite)
+@@ -46,4 +48,9 @@ set_target_properties(libprotobuf-lite PROPERTIES
+ )
+ add_library(protobuf::libprotobuf-lite ALIAS libprotobuf-lite)
+ 
+-target_link_libraries(libprotobuf-lite PRIVATE utf8_validity)
++# Linkage to the helper target is unreliable in the vendored static build, so
++# we compile the utf8_range sources directly into the archive.
++target_sources(libprotobuf-lite PRIVATE
++  ${_protobuf_utf8_dir}/utf8_range.c
++  ${_protobuf_utf8_dir}/utf8_validity.cc
++)
+diff --git a/third_party/protobuf/cmake/libprotobuf.cmake b/third_party/protobuf/cmake/libprotobuf.cmake
+--- a/third_party/protobuf/cmake/libprotobuf.cmake
++++ b/third_party/protobuf/cmake/libprotobuf.cmake
+@@ -2,6 +2,7 @@
+ 
+ include(${protobuf_SOURCE_DIR}/src/file_lists.cmake)
+ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
++set(_protobuf_utf8_dir ${protobuf_SOURCE_DIR}/third_party/utf8_range)
+ 
+ add_library(libprotobuf ${protobuf_SHARED_OR_STATIC}
+   ${libprotobuf_srcs}
+@@ -30,6 +31,7 @@ target_include_directories(libprotobuf PUBLIC
+   $<BUILD_INTERFACE:${protobuf_SOURCE_DIR}/src>
+   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+ )
++target_include_directories(libprotobuf PRIVATE ${_protobuf_utf8_dir})
+ target_link_libraries(libprotobuf PUBLIC ${protobuf_ABSL_USED_TARGETS})
+ protobuf_configure_target(libprotobuf)
+ if(protobuf_BUILD_SHARED_LIBS)
+@@ -48,4 +50,9 @@ set_target_properties(libprotobuf PROPERTIES
+ )
+ add_library(protobuf::libprotobuf ALIAS libprotobuf)
+ 
+-target_link_libraries(libprotobuf PRIVATE utf8_validity)
++# Linkage to the helper target is unreliable in the vendored static build, so
++# we compile the utf8_range sources directly into the archive.
++target_sources(libprotobuf PRIVATE
++  ${_protobuf_utf8_dir}/utf8_range.c
++  ${_protobuf_utf8_dir}/utf8_validity.cc
++)
+diff --git a/third_party/protobuf/cmake/libupb.cmake b/third_party/protobuf/cmake/libupb.cmake
+--- a/third_party/protobuf/cmake/libupb.cmake
++++ b/third_party/protobuf/cmake/libupb.cmake
+@@ -2,6 +2,7 @@
+ 
+ include(${protobuf_SOURCE_DIR}/src/file_lists.cmake)
+ include(${protobuf_SOURCE_DIR}/cmake/protobuf-configure-target.cmake)
++set(_protobuf_utf8_dir ${protobuf_SOURCE_DIR}/third_party/utf8_range)
+ 
+ set(bootstrap_cmake_dir ${protobuf_SOURCE_DIR}/upb/reflection/cmake)
+ set(bootstrap_sources
+@@ -24,6 +25,7 @@ target_include_directories(libupb PUBLIC
+   $<BUILD_INTERFACE:${bootstrap_cmake_dir}>
+   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+ )
++target_include_directories(libupb PRIVATE ${_protobuf_utf8_dir})
+ 
+ protobuf_configure_target(libupb)
+ 
+@@ -37,4 +39,6 @@ set_target_properties(libupb PROPERTIES
+     VISIBILITY_INLINES_HIDDEN ON
+ )
+ add_library(protobuf::libupb ALIAS libupb)
+-target_link_libraries(libupb PRIVATE utf8_range)
++# Linkage to the helper target is unreliable in the vendored static build, so
++# we compile the utf8_range source directly into the archive.
++target_sources(libupb PRIVATE ${_protobuf_utf8_dir}/utf8_range.c)
