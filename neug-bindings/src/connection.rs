@@ -4,6 +4,9 @@ use neug_protocol::{RequestPayload, ResponsePayload};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+const ACCESS_MODE_PREFIX: &str = "/*__NEUG_ACCESS_MODE__=";
+const ACCESS_MODE_SUFFIX: &str = "*/";
+
 /// Represents the access mode for a query.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessMode {
@@ -38,6 +41,16 @@ impl fmt::Display for QueryResult {
     }
 }
 
+fn encode_execute_query(query: &str, access_mode: Option<AccessMode>) -> String {
+    match access_mode {
+        Some(mode) => format!(
+            "{ACCESS_MODE_PREFIX}{}{ACCESS_MODE_SUFFIX}{query}",
+            mode.as_str()
+        ),
+        None => query.to_string(),
+    }
+}
+
 /// Represents a connection to the NeuG database.
 pub struct Connection {
     conn_id: u64,
@@ -63,7 +76,7 @@ impl Connection {
     pub fn execute_with_options(
         &self,
         query: &str,
-        _access_mode: Option<AccessMode>,
+        access_mode: Option<AccessMode>,
         _parameters: Option<&HashMap<String, String>>, // Future: implement parameter mapping
     ) -> Result<QueryResult> {
         if !self.is_open() {
@@ -72,8 +85,7 @@ impl Connection {
 
         let res = self.worker.send_request(RequestPayload::Execute {
             conn_id: self.conn_id,
-            query: query.to_string(),
-            access_mode: _access_mode.map(|mode| mode.as_str().to_string()),
+            query: encode_execute_query(query, access_mode),
         })?;
 
         match res {
@@ -97,5 +109,27 @@ impl Connection {
 impl Drop for Connection {
     fn drop(&mut self) {
         self.close();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ACCESS_MODE_PREFIX, ACCESS_MODE_SUFFIX, AccessMode, encode_execute_query};
+
+    #[test]
+    fn execute_query_encoding_keeps_plain_queries_unchanged() {
+        assert_eq!(
+            encode_execute_query("MATCH (n) RETURN n", None),
+            "MATCH (n) RETURN n"
+        );
+    }
+
+    #[test]
+    fn execute_query_encoding_prefixes_access_mode() {
+        let encoded = encode_execute_query("RETURN 1", Some(AccessMode::Read));
+        assert_eq!(
+            encoded,
+            format!("{ACCESS_MODE_PREFIX}r{ACCESS_MODE_SUFFIX}RETURN 1")
+        );
     }
 }

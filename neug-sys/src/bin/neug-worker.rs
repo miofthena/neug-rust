@@ -11,6 +11,9 @@ use std::io::{self, BufReader, BufWriter, Write};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
+const ACCESS_MODE_PREFIX: &str = "/*__NEUG_ACCESS_MODE__=";
+const ACCESS_MODE_SUFFIX: &str = "*/";
+
 #[derive(Clone, Copy)]
 struct SyncDb(neug_db_t);
 unsafe impl Send for SyncDb {}
@@ -20,6 +23,21 @@ unsafe impl Sync for SyncDb {}
 struct SyncConn(neug_conn_t);
 unsafe impl Send for SyncConn {}
 unsafe impl Sync for SyncConn {}
+
+fn decode_execute_query(query: String) -> (String, Option<String>) {
+    let Some(rest) = query.strip_prefix(ACCESS_MODE_PREFIX) else {
+        return (query, None);
+    };
+    let Some((mode, stripped_query)) = rest.split_once(ACCESS_MODE_SUFFIX) else {
+        return (query, None);
+    };
+
+    if !matches!(mode, "r" | "i" | "u" | "s") {
+        return (query, None);
+    }
+
+    (stripped_query.to_string(), Some(mode.to_string()))
+}
 
 fn main() {
     unsafe { neug_init() };
@@ -137,11 +155,7 @@ fn main() {
                         ResponsePayload::Error("Invalid db_id".to_string())
                     }
                 }
-                RequestPayload::Execute {
-                    conn_id,
-                    query,
-                    access_mode,
-                } => {
+                RequestPayload::Execute { conn_id, query } => {
                     let conn_ptr = conns_clone.read().unwrap().get(&conn_id).copied();
                     let conn_lock = conn_locks_clone.read().unwrap().get(&conn_id).cloned();
                     if let (Some(SyncConn(ptr)), Some(conn_lock)) = (conn_ptr, conn_lock) {
@@ -149,6 +163,7 @@ fn main() {
                         // conn_id must execute in order even though different
                         // connections can still run concurrently.
                         let _conn_guard = conn_lock.lock().unwrap();
+                        let (query, access_mode) = decode_execute_query(query);
                         if let Ok(c_query) = CString::new(query) {
                             let c_access_mode = match access_mode {
                                 Some(mode) => match CString::new(mode) {
@@ -241,5 +256,26 @@ fn main() {
             let response = Response { req_id, payload };
             let _ = tx_clone.send(response);
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ACCESS_MODE_PREFIX, ACCESS_MODE_SUFFIX, decode_execute_query};
+
+    #[test]
+    fn execute_query_decoding_extracts_access_mode_prefix() {
+        let (query, access_mode) = decode_execute_query(format!(
+            "{ACCESS_MODE_PREFIX}u{ACCESS_MODE_SUFFIX}CREATE NODE TABLE t(id INT64, PRIMARY KEY(id));"
+        ));
+        assert_eq!(query, "CREATE NODE TABLE t(id INT64, PRIMARY KEY(id));");
+        assert_eq!(access_mode.as_deref(), Some("u"));
+    }
+
+    #[test]
+    fn execute_query_decoding_preserves_plain_queries() {
+        let (query, access_mode) = decode_execute_query("MATCH (n) RETURN n".to_string());
+        assert_eq!(query, "MATCH (n) RETURN n");
+        assert!(access_mode.is_none());
     }
 }
