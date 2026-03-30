@@ -456,7 +456,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "neug-benchmarks"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "criterion",
  "libc",
@@ -468,7 +468,7 @@ dependencies = [
 
 [[package]]
 name = "neug-protocol"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bincode",
  "serde",
@@ -476,7 +476,7 @@ dependencies = [
 
 [[package]]
 name = "neug-rust"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bincode",
  "libc",
@@ -488,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "neug-sys"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bincode",
  "bindgen",
